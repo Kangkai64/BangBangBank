@@ -28,8 +28,10 @@ printString PROTO,
 displayMainMenu PROTO
 
 promptForIntChoice PROTO,
-    upperBound: BYTE,
-    lowerBound: BYTE
-
+    lowerBound: BYTE,
+    upperBound: BYTE
+	
 getDateTimeComponent PROTO,
 	timeOption: BYTE
+
+myWait PROTO

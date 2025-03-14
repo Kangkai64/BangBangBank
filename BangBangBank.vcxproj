@@ -26,6 +26,7 @@
     </MASM>
     <MASM Include="printString.asm" />
     <MASM Include="promptForIntChoice.asm" />
+    <MASM Include="myWait.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />

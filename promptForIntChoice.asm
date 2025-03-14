@@ -9,20 +9,22 @@ INCLUDE BangBangBank.inc
 
 .data
 promptMsg BYTE "Enter your choice: ", 0
-invalidChoiceMsg BYTE NEWLINE, "Invalid option. Please try again", NEWLINE, 0
-wrongTypeMessage BYTE NEWLINE, "Please enter a number within the range", NEWLINE, 0
+invalidChoiceMsg BYTE NEWLINE, NEWLINE, "Invalid option. Please try again", NEWLINE, 0
+wrongTypeMessage BYTE NEWLINE, NEWLINE, "Please enter a number within the range", NEWLINE, 0
+exitMessage BYTE NEWLINE, NEWLINE, "Thank you for using Bang Bang Bank!", 0
 
 .code
 promptForIntChoice PROC USES ebx ecx edx,
-    upperBound: BYTE,
-    lowerBound: BYTE
-
+    lowerBound: BYTE,
+    upperBound: BYTE
+    
     INVOKE printString, OFFSET promptMsg
     call ReadChar
+    call WriteChar
     
     ; Check if it's 9 for special exit case
     .IF al == '9'
-        mov eax, 9
+        INVOKE printString, OFFSET exitMessage
         CLC           ; Clear carry flag to indicate success
         jmp done      ; Jump to the end to return
     .ENDIF
@@ -30,9 +32,8 @@ promptForIntChoice PROC USES ebx ecx edx,
     ; Check if input is a digit
     .IF al < '0' || al > '9'
         INVOKE printString, OFFSET wrongTypeMessage
+        call myWait
         STC           ; Set carry flag to indicate error
-        call WaitMsg
-        call Crlf
         jmp done
     .ENDIF
     
@@ -42,9 +43,8 @@ promptForIntChoice PROC USES ebx ecx edx,
     ; Check if within bounds
     .IF al < lowerBound || al > upperBound
         INVOKE printString, OFFSET invalidChoiceMsg
+        call myWait
         STC           ; Set carry flag to indicate error
-        call WaitMsg
-        call Crlf
         jmp done
     .ENDIF
     

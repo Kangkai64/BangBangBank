@@ -6,6 +6,7 @@
     <MASM Include="displayMainMenu.asm" />
     <MASM Include="promptForIntChoice.asm" />
     <MASM Include="getDateTimeComponent.asm" />
+    <MASM Include="myWait.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />

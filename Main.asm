@@ -19,11 +19,8 @@ main PROC
 	mainMenu:
 		call displayMainMenu
 		jc mainMenu
-		; Test if it can go out of the loop
-		call Crlf
-		call Crlf
-		call WaitMsg
 
+	call Crlf
 	exit
 main ENDP
 END main
