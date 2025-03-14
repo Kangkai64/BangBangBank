@@ -19,9 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <MASM Include="displayMainMenu.asm" />
+    <MASM Include="getDateTimeComponent.asm" />
     <MASM Include="Main.asm">
       <AssembledCodeListingFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)$(ProjectName).lst</AssembledCodeListingFile>
     </MASM>
+    <MASM Include="printString.asm" />
+    <MASM Include="promptForIntChoice.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="BangBangBank.inc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
