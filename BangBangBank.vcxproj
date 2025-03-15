@@ -20,13 +20,25 @@
   </ItemGroup>
   <ItemGroup>
     <MASM Include="displayMainMenu.asm" />
+    <MASM Include="encrypt.asm" />
+    <MASM Include="helper.asm" />
+    <MASM Include="promptForPassword.asm" />
     <MASM Include="getDateTimeComponent.asm" />
+    <MASM Include="login.asm" />
     <MASM Include="Main.asm">
       <AssembledCodeListingFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)$(ProjectName).lst</AssembledCodeListingFile>
     </MASM>
     <MASM Include="printString.asm" />
     <MASM Include="promptForIntChoice.asm" />
-    <MASM Include="myWait.asm" />
+    <MASM Include="readAccountFile.asm" />
+    <MASM Include="outputToFile.asm" />
+    <MASM Include="updateUserFile.asm" />
+    <MASM Include="validateLoginTime.asm" />
+    <MASM Include="Wait_Msg.asm" />
+    <MASM Include="inputFromFile.asm" />
+    <MASM Include="promptForUsername.asm" />
+    <MASM Include="setTxtColor.asm" />
+    <MASM Include="validatePassword.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />
@@ -129,7 +141,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\Irvine</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$Irvine32.lib;(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$kernel32.lib;user32.lib;Irvine32.lib;(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <MASM>
       <IncludePaths>C:\Irvine</IncludePaths>

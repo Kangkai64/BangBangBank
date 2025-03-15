@@ -1,5 +1,6 @@
 INCLUDE BangBangBank.inc
 
+;---------------------------------------------------------------
 ; This module will print out the date and time 
 ; component of the current time, based on the option received.
 ; 1 for YEAR, 2 for MONTH, 3 for DAY, 4 for WEEKDAY,
@@ -7,6 +8,7 @@ INCLUDE BangBangBank.inc
 ; Receives : option (BYTE)
 ; Returns : Nothing
 ; Last update: 13/3/2025
+;--------------------------------------------------------------
 
 .data
 dateTime SYSTEMTIME <>

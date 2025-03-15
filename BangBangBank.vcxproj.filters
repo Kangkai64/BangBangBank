@@ -6,7 +6,19 @@
     <MASM Include="displayMainMenu.asm" />
     <MASM Include="promptForIntChoice.asm" />
     <MASM Include="getDateTimeComponent.asm" />
-    <MASM Include="myWait.asm" />
+    <MASM Include="Wait_Msg.asm" />
+    <MASM Include="login.asm" />
+    <MASM Include="setTxtColor.asm" />
+    <MASM Include="encrypt.asm" />
+    <MASM Include="validatePassword.asm" />
+    <MASM Include="inputFromFile.asm" />
+    <MASM Include="promptForUsername.asm" />
+    <MASM Include="promptForPassword.asm" />
+    <MASM Include="updateUserFile.asm" />
+    <MASM Include="validateLoginTime.asm" />
+    <MASM Include="readAccountFile.asm" />
+    <MASM Include="helper.asm" />
+    <MASM Include="outputToFile.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />
