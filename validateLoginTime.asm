@@ -54,28 +54,28 @@ validateLoginTime PROC,
     mov esi, firstLoginTimestamp
     
     ; Extract day
-    call ParseNumber
+    call StringToInt
     mov attemptDay, eax
     
     ; Skip slash
     add esi, 1
     
     ; Extract month
-    call ParseNumber
+    call StringToInt
     mov attemptMonth, eax
     
     ; Skip slash
     add esi, 1
     
     ; Extract year
-    call ParseNumber
+    call StringToInt
     mov attemptYear, eax
     
     ; Skip space
     add esi, 1
     
     ; Extract hour
-    call ParseNumber
+    call StringToInt
     mov attemptHour, eax
     
     ; Calculate hours difference

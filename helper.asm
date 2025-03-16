@@ -28,7 +28,7 @@ formatSystemTime PROC,
     
 dayTwoDigits:
     movzx eax, WORD PTR [esi].SYSTEMTIME.wDay
-    call formatNumberToString
+    call IntToString
     
     ; Add slash
     mov BYTE PTR [edi], '/'
@@ -45,7 +45,7 @@ dayTwoDigits:
     
 monthTwoDigits:
     movzx eax, WORD PTR [esi].SYSTEMTIME.wMonth
-    call formatNumberToString
+    call IntToString
     
     ; Add slash
     mov BYTE PTR [edi], '/'
@@ -57,6 +57,7 @@ monthTwoDigits:
     ; For year we need to handle 4 digits
     mov temp, eax
     mov ebx, 1000  ; Divisor for thousands place
+    xor edx, edx
     
     ; Convert each digit
     mov eax, temp
@@ -100,7 +101,7 @@ monthTwoDigits:
     
 hourTwoDigits:
     movzx eax, WORD PTR [esi].SYSTEMTIME.wHour
-    call formatNumberToString
+    call IntToString
     
     ; Add colon
     mov BYTE PTR [edi], ':'
@@ -117,7 +118,7 @@ hourTwoDigits:
     
 minuteTwoDigits:
     movzx eax, WORD PTR [esi].SYSTEMTIME.wMinute
-    call formatNumberToString
+    call IntToString
     
     ; Add colon
     mov BYTE PTR [edi], ':'
@@ -134,7 +135,7 @@ minuteTwoDigits:
     
 secondTwoDigits:
     movzx eax, WORD PTR [esi].SYSTEMTIME.wSecond
-    call formatNumberToString
+    call IntToString
     
     ; Add null terminator
     mov BYTE PTR [edi], 0
@@ -143,95 +144,141 @@ secondTwoDigits:
     ret
 formatSystemTime ENDP
 
-;-----------------------------------------------------------------------
-; Helper function to format a number as a string
-; Receives: EAX = number to format, EDI = destination buffer
-; Returns: EDI = updated position in buffer after the formatted number
-;-----------------------------------------------------------------------
-formatNumberToString PROC USES eax ebx edx
-    
-    ; Handle single digit case separately
-    cmp eax, 10
-    jae twoOrMoreDigits
-    
-    ; Single digit
-    add al, '0'     ; Convert to ASCII
-    mov [edi], al   ; Store the character
-    inc edi         ; Move pointer
-    jmp formatNumberDone
-    
-twoOrMoreDigits:
-    ; Convert to ASCII digits
-    mov ebx, 10     ; Divisor
-    
-    ; For values >=10 we need to handle recursively
-    cmp eax, 100
-    jae threeOrMoreDigits
-    
-    ; Two digits
-    div bl          ; AL = tens, AH = units
-    add al, '0'     ; Convert tens to ASCII
-    mov [edi], al   ; Store tens digit
-    inc edi         ; Move pointer
-    
-    mov al, ah      ; Move units to AL
-    add al, '0'     ; Convert units to ASCII
-    mov [edi], al   ; Store units digit
-    inc edi         ; Move pointer
-    jmp formatNumberDone
-    
-threeOrMoreDigits:
-    ; Handle larger numbers if needed
-    xor edx, edx    ; Clear EDX for division
-    div ebx         ; EAX = quotient, EDX = remainder
-    
-    ; Recursively format the quotient
-    call formatNumberToString
-    
-    ; Format the remainder
-    mov eax, edx
-    add al, '0'     ; Convert to ASCII
-    mov [edi], al   ; Store the character
-    inc edi         ; Move pointer
-    
-formatNumberDone:
-    ret
-formatNumberToString ENDP
-
 ;--------------------------------------------------------------------------------
-; Helper function to parse a number from a string
-; Receives: ESI pointing to start of number
-; Returns: EAX = parsed number, ESI = updated position
+; StringToInt: Converts an ASCII string to integer (supports signed integers)
+; Receives: Pointer to null-terminated string containing a number
+; Returns: EAX = converted integer value, ESI = updated position
 ;--------------------------------------------------------------------------------
-parseNumber PROC USES ebx edx
+StringToInt PROC USES ebx edx,
+    pString: PTR BYTE
     
-    xor eax, eax  ; Clear result
-    xor ebx, ebx  ; Digit counter
+    ; Set up pointer to string
+    mov esi, pString
     
-parseDigits:
+    ; Check for negative sign
+    xor ebx, ebx            ; EBX = sign flag (0 = positive)
+    mov al, [esi]
+    cmp al, '-'
+    jne parse_digits
+    
+    ; Set negative flag and skip the sign
+    mov ebx, 1
+    inc esi
+    
+parse_digits:
+    xor eax, eax            ; Clear result
+    xor edx, edx            ; Digit counter
+    
+digit_loop:
     mov dl, [esi]
     cmp dl, '0'
-    jl endNumber
+    jl end_parse
     cmp dl, '9'
-    jg endNumber
+    jg end_parse
     
     ; Valid digit, process it
-    imul eax, 10      ; Multiply current result by 10
-    sub dl, '0'       ; Convert ASCII to number
-    add eax, edx      ; Add new digit
-    inc esi           ; Move to next character
-    inc ebx           ; Increment digit counter
-    jmp parseDigits
+    imul eax, 10            ; Multiply current result by 10
+    sub dl, '0'             ; Convert ASCII to number
+    add eax, edx            ; Add new digit
+    inc esi                 ; Move to next character
+    inc ebx                 ; Increment digit counter
+    jmp digit_loop
     
-endNumber:
+end_parse:
     ; If no digits were found, return 0
-    cmp ebx, 0
-    jne parseNumberDone
-    xor eax, eax      ; Return 0
+    cmp ebx, 1              ; Check if we only saw the negative sign
+    jnz apply_sign
+    cmp ebx, 0              ; Or if we saw nothing at all
+    jnz apply_sign
+    xor eax, eax            ; Return 0
     
-parseNumberDone:
+apply_sign:
+    ; Apply sign if negative
+    cmp ebx, 1
+    jne done_parsing
+    neg eax                 ; Negate if negative
+    
+done_parsing:
     ret
-parseNumber ENDP
+StringToInt ENDP
+
+;--------------------------------------------------------------------------------
+; IntToString: Converts an integer to an ASCII string
+; Receives: EAX = number to format, EDI = destination buffer
+; Returns: EDI = updated position in buffer after the formatted number
+;--------------------------------------------------------------------------------
+IntToString PROC USES eax ebx ecx edx
+    
+    ; Check for negative number
+    test eax, eax
+    jns format_positive     ; Jump if not negative
+    
+    ; Handle negative number
+    neg eax                 ; Make positive
+    mov BYTE PTR [edi], '-' ; Add negative sign
+    inc edi                 ; Move pointer past sign
+    
+format_positive:
+    ; Determine number of digits needed
+    mov ecx, eax            ; Save original number
+    mov ebx, 10             ; Base 10
+    
+    ; First, count digits by repeatedly dividing by 10
+    mov edx, 1              ; Start with at least 1 digit
+    push edx                ; Save digit count on stack
+    
+    test eax, eax
+    jz single_digit         ; Special case for 0
+    
+count_digits:
+    cmp eax, 10
+    jb done_counting
+    xor edx, edx
+    div ebx                 ; EAX = quotient, EDX = remainder
+    inc DWORD PTR [esp]     ; Increment digit count on stack
+    test eax, eax
+    jnz count_digits
+    
+done_counting:
+    pop ecx                 ; ECX = digit count
+    mov eax, ecx            ; Restore original number
+    
+    ; Now generate digits from right to left
+    add edi, ecx            ; Move to end position + 1
+    mov BYTE PTR [edi], 0   ; Null-terminate the string
+    dec edi                 ; Move to last digit position
+    
+    ; Handle 0 separately
+    test eax, eax
+    jnz digit_conversion
+    mov BYTE PTR [edi], '0'
+    inc edi
+    jmp conversion_done
+    
+digit_conversion:
+    ; Convert each digit, from right to left
+    mov ecx, eax            ; Save number
+    
+gen_digits:
+    xor edx, edx
+    div ebx                 ; EAX = quotient, EDX = remainder
+    add dl, '0'             ; Convert to ASCII
+    mov [edi], dl           ; Store digit
+    dec edi                 ; Move left
+    test eax, eax
+    jnz gen_digits          ; Continue if more digits
+    
+conversion_done:
+    ret
+
+single_digit:
+    ; Handle single digit case (0-9)
+    add al, '0'             ; Convert to ASCII
+    mov [edi], al           ; Store the character
+    inc edi                 ; Move pointer
+    jmp conversion_done
+    
+IntToString ENDP
 
 ;--------------------------------------------------------------------------------
 ; ParseCSVField: Parse the next field from the CSV format
@@ -285,16 +332,98 @@ parseCSVField PROC USES eax ecx edx
         ret
 parseCSVField ENDP
 
+;-------------------------------------------------------------------------------------
+; convertHexToString - Converts binary data to a hex string representation
+; Receives: 
+;   - source: PTR BYTE - Pointer to source binary data
+;   - destination: PTR BYTE - Pointer to destination buffer for hex string
+;   - byteCount: DWORD - Number of bytes to convert (optional, if 0 will assume null-terminated)
+; Returns: 
+;   - EAX = number of characters written to destination (excluding null terminator)
+; Notes:
+;   - Destination buffer must be at least (byteCount*2)+1 bytes to accommodate the string and null terminator
+;   - Each byte becomes two hex characters in the output string
+; Example: [0x1A, 0xF3] becomes "1AF3"
+;-------------------------------------------------------------------------------------
+.data
+hexChars BYTE "0123456789ABCDEF",0
+
+.code
+convertHexToString PROC USES ebx ecx edx esi edi,
+    source: PTR BYTE,
+    destination: PTR BYTE,
+    byteCount: DWORD
+
+    LOCAL bytesProcessed:DWORD
+    
+    mov bytesProcessed, 0
+    mov esi, source          ; Source pointer
+    mov edi, destination     ; Destination pointer
+    mov ecx, byteCount       ; Byte count
+    
+    ; If byteCount is 0, count bytes until null terminator
+    .IF ecx == 0
+        push esi
+        call Str_length      ; Get length of source
+        mov ecx, eax         ; Set byte count
+        pop esi
+    .ENDIF
+    
+    ; If no bytes to process, return empty string
+    .IF ecx == 0
+        mov BYTE PTR [edi], 0
+        mov eax, 0
+        ret
+    .ENDIF
+    
+    ; Process each byte
+processLoop:
+    movzx eax, BYTE PTR [esi]  ; Get current byte
+    mov ebx, eax
+    
+    ; Get high nibble (first hex digit)
+    shr eax, 4                  ; Shift right by 4 bits
+    and eax, 0Fh                ; Mask to get only low nibble
+    lea edx, hexChars           ; Load hex character array address
+    movzx eax, BYTE PTR [edx+eax] ; Get corresponding hex char
+    mov [edi], al               ; Store first hex char
+    inc edi
+    
+    ; Get low nibble (second hex digit)
+    mov eax, ebx
+    and eax, 0Fh                ; Mask to get only low nibble
+    movzx eax, BYTE PTR [edx+eax] ; Get corresponding hex char
+    mov [edi], al               ; Store second hex char
+    inc edi
+    
+    ; Move to next byte
+    inc esi
+    inc bytesProcessed
+    dec ecx
+    jnz processLoop
+    
+    ; Add null terminator
+    mov BYTE PTR [edi], 0
+    
+    ; Return number of characters written (2 per byte)
+    mov eax, bytesProcessed
+    shl eax, 1                  ; Multiply by 2
+    
+    ret
+convertHexToString ENDP
+
 ;--------------------------------------------------------------------------
 ; Str_cat : Concatenates two strings
 ; Receives: EDX - Pointer to destination string (null-terminated)
 ;           EAX - Pointer to source string to append (null-terminated)
 ; Returns : EDX - Pointer to the resulting concatenated string
 ;--------------------------------------------------------------------------
-Str_cat PROC USES esi edi
+Str_cat PROC USES esi edi,
+    sourceString : PTR BYTE,
+    targetString : PTR BYTE
     
-    mov esi, eax    ; Source string
-    mov edi, edx    ; Destination string
+    mov esi, sourceString    ; Source string
+    mov edi, targetString    ; Target string
     
     ; Find the end of the destination string
     .WHILE BYTE PTR [edi] != 0

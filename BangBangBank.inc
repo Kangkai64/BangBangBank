@@ -59,6 +59,29 @@ customerTransaction STRUCT
     time              BYTE 32 DUP(?)
 customerTransaction ENDS
 
+;-------------------------------------------
+; File Function Prototype from kernel32.inc
+;-------------------------------------------
+CreateDirectoryA PROTO STDCALL :DWORD,:DWORD
+IFNDEF __UNICODE__
+  CreateDirectory equ <CreateDirectoryA>
+ENDIF
+
+MoveFileA PROTO STDCALL :DWORD,:DWORD
+IFNDEF __UNICODE__
+  MoveFile equ <MoveFileA>
+ENDIF
+
+DeleteFileA PROTO STDCALL :DWORD
+IFNDEF __UNICODE__
+  DeleteFile equ <DeleteFileA>
+ENDIF
+
+;-----------------------------
+; Symbols from windows.inc
+;-----------------------------
+ERROR_ALREADY_EXISTS equ 183
+
 ;-----------------------------
 ; Helper Function Prototype
 ;-----------------------------
@@ -66,17 +89,28 @@ formatSystemTime PROTO,
     systemTimePtr:PTR SYSTEMTIME,
     outputBuffer:PTR BYTE
 
-formatNumberToString PROTO
+StringToInt PROTO,
+    pString: PTR BYTE
+
+IntToString PROTO
 
 formatUserData PROTO,
     userPtr:PTR userCredential,
     outputBuffer:PTR BYTE
 
-parseNumber PROTO
-
 parseCSVField PROTO
 
-Str_cat PROTO
+parseUserCredentials PROTO,
+    user: PTR userCredential
+
+Str_cat PROTO,
+    sourceString : PTR BYTE,
+    targetString : PTR BYTE
+
+convertHexToString PROTO,
+    source: PTR BYTE,
+    destination: PTR BYTE,
+    byteCount: DWORD
 
 ;-------------------------
 ; Procedure Prototype
@@ -140,6 +174,9 @@ readTransactionFile PROTO,
 
 generateOTP PROTO,
     customerID: PTR BYTE
+
+printUserCredentials PROTO, 
+    user: PTR userCredential
 
 switchAccount PROTO,
     user: PTR userCredential,

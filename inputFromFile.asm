@@ -1,193 +1,271 @@
-
 INCLUDE BangBangBank.inc
 
 ;--------------------------------------------------------------------------------
-; This module will read user credentials from a file named "[username].txt"
-; Receives: User credential structure
-; Returns: Filled user credential structure
-; Last update: 15/3/2025
+; This module will read user credentials from a single file containing all users
+; Receives: Pointer to userCredential structure (user)
+; Returns: Filled user credential structure if credentials match
+;          Carry flag clear if file opened successfully, set if failed
+; Last update: 16/3/2025
 ;--------------------------------------------------------------------------------
 
 .data
-; Buffer to store filename (username.txt)
-filenameBuffer BYTE 255 DUP(?)
-userDataDir    BYTE "Users\", 0
-fileHandle     DWORD ?
-readBuffer     BYTE 2048 DUP(?)
-errorMsg       BYTE "Error: File cannot be opened or read", NEWLINE, 0
-bytesRead      DWORD ?
-tempBuffer     BYTE 255 DUP(?)
+; File name components
+directoryPath       BYTE "Users\", 0
+credentialFileName  BYTE "Users\userCredential.txt", 0
+accountFileName     BYTE "Users\userAccount.txt", 0
+transactionFileName BYTE "Users\transactionLog.txt", 0
+
+; Handles and buffers
+fileHandle         DWORD ?
+readBuffer         BYTE 20480 DUP(?)  ; Larger buffer for multi-user file
+errorMsg           BYTE "Error: File cannot be opened or read", NEWLINE, 0
+pathErrorMsg       BYTE "Error: Invalid file path", NEWLINE, 0
+notFoundMsg        BYTE "Invalid username or password", NEWLINE, 0
+bytesRead          DWORD ?
+tempBuffer         BYTE 512 DUP(?)
+fieldBuffer        BYTE 512 DUP(?)
+fieldIndex         DWORD 0
+currentLineStart   DWORD 0
+foundUser          BYTE 0
+inputUsername      BYTE 64 DUP(?)
 
 .code
 inputFromFile PROC,
     user: PTR userCredential
     
     pushad
-    
-    ; Create directory path for user file
-    INVOKE Str_copy, ADDR userDataDir, ADDR filenameBuffer
-    
-    ; Get length of directory path
-    mov edx, OFFSET filenameBuffer
-    call Str_length
-    
-    ; Point edi to the end of "Users\"
-    mov edi, OFFSET filenameBuffer
-    add edi, eax  ; Move to end of directory path (end of "Users\")
-    add edi, 3 ; Need to move 3 more bytes!
-    
-    ; Get the username from the structure
-    mov esi, [user]  ; esi = pointer to userCredential structure
-    add esi, OFFSET userCredential.username  ; esi points to username field
-    
-    ; Copy username to filenameBuffer after "Users\"
-appendUsername:
-    mov al, [esi]  ; Get character from username
-    cmp al, 0      ; Check for null terminator
-    je addExtension
-    mov [edi], al  ; Copy character to filenameBuffer
-    inc esi        ; Move to next character in username
-    inc edi        ; Move to next position in filenameBuffer
-    jmp appendUsername
-    
-addExtension:
-    ; Append .txt to the filename
-    mov BYTE PTR [edi], '.'
-    inc edi
-    mov BYTE PTR [edi], 't'
-    inc edi
-    mov BYTE PTR [edi], 'x'
-    inc edi
-    mov BYTE PTR [edi], 't'
-    inc edi
-    mov BYTE PTR [edi], 0  ; Add null terminator
-    
-    ; Open the file
-    mov edx, OFFSET filenameBuffer
-    call OpenInputFile
+
+    ; Copy out the username and store it into inputUsername
+    mov esi, [user]
+    add esi, OFFSET userCredential.username
+    INVOKE Str_copy, esi, ADDR inputUsername
+
+    ; Open the credentials file
+    INVOKE CreateFile, 
+        ADDR credentialFileName,         ; lpFileName
+        GENERIC_READ,                    ; dwDesiredAccess
+        FILE_SHARE_READ,                 ; dwShareMode
+        NULL,                            ; lpSecurityAttributes
+        OPEN_EXISTING,                   ; dwCreationDisposition
+        FILE_ATTRIBUTE_NORMAL,           ; dwFlagsAndAttributes
+        NULL                             ; hTemplateFile
+        
     mov fileHandle, eax
     
-    INVOKE printString, ADDR filenameBuffer
     ; Check if file opened successfully
     cmp eax, INVALID_HANDLE_VALUE
     jne fileOpenSuccess
     
     ; File open error
+    INVOKE printString, ADDR credentialFileName
+    call Crlf
     INVOKE printString, ADDR errorMsg
+
+    ; Try to create directory
+    INVOKE CreateDirectory, ADDR directoryPath, NULL
+    test eax, eax    ; Check if directory creation was successful
+    jnz directoryCreated
+
+    ; Directory creation failed
+    call Crlf
+    INVOKE printString, ADDR pathErrorMsg
+    INVOKE printString, ADDR directoryPath
+    call Crlf
+
+directoryCreated:
     call Wait_Msg
     STC ; Set carry flag
     jmp inputFileExit
     
 fileOpenSuccess:
     ; Read file content into buffer
-    mov eax, fileHandle
-    mov edx, OFFSET readBuffer
-    mov ecx, SIZEOF readBuffer - 1
-    call ReadFromFile
-    mov bytesRead, eax
+    INVOKE ReadFile, 
+        fileHandle,                     ; hFile
+        ADDR readBuffer,                ; lpBuffer
+        SIZEOF readBuffer - 1,          ; nNumberOfBytesToRead
+        ADDR bytesRead,                 ; lpNumberOfBytesRead
+        NULL                            ; lpOverlapped
+    
+    ; Check if read was successful
+    .IF eax == 0
+        INVOKE printString, ADDR errorMsg
+        call Wait_Msg
+        STC ; Set carry flag
+        jmp closeAndExit
+    .ENDIF
     
     ; Add null terminator to buffer
     mov edi, OFFSET readBuffer
-    add edi, eax
+    add edi, bytesRead
     mov BYTE PTR [edi], 0
     
     ; Close the file
-    mov eax, fileHandle
-    call CloseFile
+    INVOKE CloseHandle, fileHandle
     
-    ; Parse the buffer for data fields using CSV format
-    mov esi, OFFSET readBuffer   ; Source
+    ; Skip the header line
+    mov esi, OFFSET readBuffer
     
-    ; Skip header line if present (detect comma)
-    skipHeader:
-        mov al, [esi]
-        cmp al, 0          ; End of buffer?
-        je inputFileExit   ; File is empty or only has header
-        cmp al, 10         ; LF - new line?
-        je foundNewLine
-        cmp al, 13         ; CR?
-        je skipCR
-        inc esi
-        jmp skipHeader
-        
-    skipCR:
-        inc esi            ; Skip CR
-        cmp BYTE PTR [esi], 10  ; Check for LF
-        jne skipHeader
-        inc esi            ; Skip LF
-        jmp parseFields
-        
-    foundNewLine:
-        inc esi            ; Skip LF
-        
-    parseFields:
-        ; Read fields into structure
-        ; 1. username
-        mov edi, OFFSET tempBuffer
-        call ParseCSVField
-        
-        ; Copy to structure if not empty
-        cmp BYTE PTR [OFFSET tempBuffer], 0
-        je skipUsername
-        
-        ; Copy tempBuffer to username field
-        mov edi, [user]
-        add edi, OFFSET userCredential.username
-        INVOKE Str_copy, ADDR tempBuffer, edi
-        
-    skipUsername:
-        ; 2. hashed_password
-        mov edi, OFFSET tempBuffer
-        call ParseCSVField
-        
-        mov edi, [user]
-        add edi, OFFSET userCredential.hashed_password
-        INVOKE Str_copy, ADDR tempBuffer, edi
-        
-        ; 3. hashed_pin
-        mov edi, OFFSET tempBuffer
-        call ParseCSVField
-        
-        mov edi, [user]
-        add edi, OFFSET userCredential.hashed_pin
-        INVOKE Str_copy, ADDR tempBuffer, edi
-        
-        ; 4. customer_id
-        mov edi, OFFSET tempBuffer
-        call ParseCSVField
-        
-        mov edi, [user]
-        add edi, OFFSET userCredential.customer_id
-        INVOKE Str_copy, ADDR tempBuffer, edi
-        
-        ; 5. encryption_key
-        mov edi, OFFSET tempBuffer
-        call ParseCSVField
-        
-        mov edi, [user]
-        add edi, OFFSET userCredential.encryption_key
-        INVOKE Str_copy, ADDR tempBuffer, edi
-        
-        ; 6. loginAttempt
-        mov edi, OFFSET tempBuffer
-        call ParseCSVField
+skipHeaderLoop:
+    mov al, [esi]
+    cmp al, 0          ; End of buffer?
+    je userNotFound    ; File is empty or only has header
+    cmp al, 10         ; LF - new line?
+    je foundDataStart
+    cmp al, 13         ; CR?
+    je skipCR
+    inc esi
+    jmp skipHeaderLoop
+    
+skipCR:
+    inc esi            ; Skip CR
+    cmp BYTE PTR [esi], 10  ; Check for LF
+    jne skipHeaderLoop
+    inc esi            ; Skip LF
+    
+foundDataStart:
+    
+    ; Set foundUser flag to 0 (not found)
+    mov foundUser, 0
+    
+searchUserLoop:
+    ; Store the start of current line
+    mov currentLineStart, esi
+    
+    ; Parse username field from current line
+    mov edi, OFFSET tempBuffer
+    call ParseCSVField
 
-        mov edi, [user]
-        add edi, OFFSET userCredential.loginAttempt
-        INVOKE Str_copy, ADDR tempBuffer, edi
+    ; Compare with input username
+    INVOKE Str_compare, ADDR tempBuffer, ADDR inputUsername
+    
+    ; If match found, process this record
+    .IF ZERO?
+        ; Found the user! Set flag
+        mov foundUser, 1
         
-        ; 7. firstLoginAttemptTimestamp
-        mov edi, OFFSET tempBuffer
-        call ParseCSVField
+        ; Return to the start of this line
+        mov esi, currentLineStart
         
-        mov edi, [user]
-        add edi, OFFSET userCredential.firstLoginAttemptTimestamp
-        INVOKE Str_copy, ADDR tempBuffer, edi
-
-        CLC ; Clear carry flag if no error
-
+        ; Initialize fieldIndex
+        mov fieldIndex, 0
+        
+        ; Parse all fields for this user
+        INVOKE ParseUserCredentials, user
+        
+        jmp inputFileExit
+    .ENDIF
+    
+    ; Username didn't match, skip to next line
+skipToNextLine:
+    mov al, [esi]
+    cmp al, 0      ; End of file?
+    je userNotFound
+    cmp al, 10     ; LF?
+    je nextLine
+    cmp al, 13     ; CR?
+    je skipToNextCR
+    inc esi
+    jmp skipToNextLine
+    
+skipToNextCR:
+    inc esi        ; Skip CR
+    cmp BYTE PTR [esi], 10  ; Check for LF
+    jne skipToNextLine
+    inc esi        ; Skip LF
+    jmp searchUserLoop
+    
+nextLine:
+    inc esi        ; Skip LF
+    jmp searchUserLoop
+    
+userNotFound:
+    INVOKE printString, ADDR notFoundMsg
+    call Wait_Msg
+    STC ; Set carry flag
+    
+closeAndExit:
+    ; Make sure file is closed
+    .IF fileHandle != INVALID_HANDLE_VALUE
+        INVOKE CloseHandle, fileHandle
+    .ENDIF
+    
 inputFileExit:
     popad
     ret
 inputFromFile ENDP
+
+;--------------------------------------------------------------------------------
+; ParseUserCredentials PROC
+; Parses all credential fields for the current user and fills the structure
+; Receives: ESI = pointer to start of user record in buffer
+;           user = pointer to userCredential structure
+; Returns: Filled user credential structure
+;--------------------------------------------------------------------------------
+ParseUserCredentials PROC,
+    user: PTR userCredential
+    ; Reset fieldIndex
+    mov fieldIndex, 0
+    
+parseNextCredField:
+    ; Parse the field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    
+    ; Process based on field index
+    mov eax, fieldIndex
+    
+    .IF eax == 0       ; username
+        mov edi, [user]
+        add edi, OFFSET userCredential.username
+        INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    .ELSEIF eax == 1   ; hashed_password
+        mov edi, [user]
+        add edi, OFFSET userCredential.hashed_password
+        INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    .ELSEIF eax == 2   ; hashed_pin
+        mov edi, [user]
+        add edi, OFFSET userCredential.hashed_pin
+        INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    .ELSEIF eax == 3   ; customer_id
+        mov edi, [user]
+        add edi, OFFSET userCredential.customer_id
+        INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    .ELSEIF eax == 4   ; encryption_key
+        mov edi, [user]
+        add edi, OFFSET userCredential.encryption_key
+        INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    .ELSEIF eax == 5   ; loginAttempt
+        mov edi, [user]
+        add edi, OFFSET userCredential.loginAttempt
+        INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    .ELSEIF eax == 6   ; firstLoginAttemptTimestamp
+        mov edi, [user]
+        add edi, OFFSET userCredential.firstLoginAttemptTimestamp
+        INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    .ENDIF
+    
+    ; Increment field index
+    inc fieldIndex
+    
+    ; Check if we've reached end of line or file
+    cmp BYTE PTR [esi], 0   ; End of buffer?
+    je doneParsingFields
+    cmp BYTE PTR [esi], 13  ; CR?
+    je doneParsingFields
+    cmp BYTE PTR [esi], 10  ; LF?
+    je doneParsingFields
+    
+    ; Continue to next field
+    jmp parseNextCredField
+    
+doneParsingFields:
+    ret
+ParseUserCredentials ENDP
 END

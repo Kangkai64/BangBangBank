@@ -22,6 +22,7 @@
     <MASM Include="displayMainMenu.asm" />
     <MASM Include="encrypt.asm" />
     <MASM Include="helper.asm" />
+    <MASM Include="printUserCredentials.asm" />
     <MASM Include="promptForPassword.asm" />
     <MASM Include="getDateTimeComponent.asm" />
     <MASM Include="login.asm" />

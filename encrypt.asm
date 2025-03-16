@@ -21,40 +21,32 @@ encrypt PROC,
     
     pushad
     
+    call Crlf
     ; Get string length of data
-    mov edx, dataArray
-    call Str_length
+    INVOKE Str_length, dataArray
     mov arrayLength, eax
     
     ; Get key length of data
-    mov edx, keyArray
-    call Str_length
+    INVOKE Str_length, keyArray
     mov keyLength, eax
-
+    
     ; Initialize loop
     mov ecx, arrayLength
     mov esi, dataArray      ; Source data pointer
     mov edi, OFFSET encryptedDataArray ; Destination pointer
     mov ebx, keyArray       ; Key pointer
-    mov edx, 0              ; Index for key wrapping
+    xor edx, edx            ; Key index counter (start at 0)
     
 encrypt_data:
     ; Load a single byte
     mov al, BYTE PTR [esi]
     
     ; Get current key byte and XOR
-    push ecx                ; Save main counter
-    mov ecx, edx            ; Current key index
-    mod_key:
-        cmp ecx, keyLength
-        jl use_key
-        sub ecx, keyLength
-        jmp mod_key
-    use_key:
-        mov edx, ecx        ; Save key index for next iteration
-        mov ah, BYTE PTR [ebx + ecx]
-        xor al, ah          ; XOR data with key
-    pop ecx                 ; Restore main counter
+    mov eax, edx            ; Put key index in eax
+    xor edx, edx            ; Clear edx for division
+    div keyLength           ; Divide by key length, remainder in edx
+    mov al, BYTE PTR [ebx + edx] ; Get key byte using remainder
+    xor al, BYTE PTR [esi]  ; XOR with data byte
     
     ; Store encrypted byte
     mov BYTE PTR [edi], al
@@ -64,7 +56,8 @@ encrypt_data:
     inc edi
     inc edx
     
-    LOOP encrypt_data
+    dec ecx
+    jnz encrypt_data
     
     ; Set terminating null byte
     mov BYTE PTR [edi], 0

@@ -1,16 +1,14 @@
 
 INCLUDE BangBangBank.inc
 
-;------------------------------------------------------------------------
+;-------------------------------------------------------------------------------------
 ; This module will check and validate the password without decryption
 ; Receives : Input password pointer, hashed password pointer, encryption key pointer
-; Returns : EAX = 1 if password is valid, 0 if invalid
-; Last update: 15/3/2025
-;------------------------------------------------------------------------
+; Returns : Carry flag is set if password is invalid, cleared if password is valid
+; Last update: 16/3/2025
+;-------------------------------------------------------------------------------------
 .data
 validationBuffer BYTE 255 DUP(?)
-validationSuccess BYTE "Password is valid.", NEWLINE, 0
-validationFailure BYTE "Password is invalid.", NEWLINE, 0
 
 .code
 validatePassword PROC,
@@ -19,7 +17,7 @@ validatePassword PROC,
     encryptionKey: PTR BYTE
     
     pushad
-    
+
     ; First determine key length
     mov edx, encryptionKey
     call Str_length
@@ -27,18 +25,24 @@ validatePassword PROC,
     
     ; Hash the input password with encryption key
     INVOKE encrypt, inputPassword, encryptionKey
-    
+
     ; EAX now contains pointer to encrypted result
-    mov esi, eax            ; Encrypted input password
-    mov edi, hashedPassword ; Stored hashed password
-    
+    mov esi, eax                         ; Encrypted input password
+    INVOKE convertHexToString, eax, ADDR validationBuffer, 0  ; Convert binary to string
+    lea esi, validationBuffer            ; Now use string version for comparison
+    mov edi, hashedPassword              ; Stored hashed password
+
     ; Compare the results
     push ecx                ; Save registers
     push esi
     push edi
     
-    mov ebx, 1              ; Default to success
-    
+    ; Tried to check their content
+    INVOKE printString, esi
+    call Crlf
+    INVOKE printString, edi
+    call Crlf
+
 compareLoop:
     mov al, [esi]
     mov dl, [edi]
@@ -64,27 +68,16 @@ checkEndDest:
     jmp comparisonDone      ; Both strings ended, match found
     
 notMatching:
-    mov ebx, 0              ; Set failure flag
+    STC                     ; Set failure flag
+    jmp validatePasswordExit
     
 comparisonDone:
+    CLC ; Clear carry if successed
+
+validatePasswordExit:
     pop edi                 ; Restore registers
     pop esi
     pop ecx
-    
-    ; Set return value
-    mov [esp+28], ebx       ; Update EAX in saved registers (return value)
-    
-    ; Optional: Print result for debugging
-    .IF ebx == 1
-        INVOKE printString, ADDR validationSuccess
-    .ELSE
-        INVOKE printString, ADDR validationFailure
-    .ENDIF
-    
-    ; Uncomment to display validation result
-    call WriteString
-    call Crlf
-    
     popad
     ret
 validatePassword ENDP

@@ -19,6 +19,7 @@
     <MASM Include="readAccountFile.asm" />
     <MASM Include="helper.asm" />
     <MASM Include="outputToFile.asm" />
+    <MASM Include="printUserCredentials.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />

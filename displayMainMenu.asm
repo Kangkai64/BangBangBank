@@ -10,8 +10,8 @@ INCLUDE BangBangBank.inc
 
 .data
 dateHeader BYTE "Today is ", 0
-colorCode BYTE (blue + (black SHL 4))
-defaultColor BYTE (white + (black SHL 4))
+colorCode BYTE (yellow + (black SHL 4))
+defaultColor BYTE ?
 mainMenuDesign BYTE "Welcome to Bang Bang Bank", NEWLINE, 
 					"==============================", NEWLINE, 
 					"Main Menu", NEWLINE, 
@@ -26,6 +26,9 @@ password BYTE 50 DUP("*")
 .code
 displayMainMenu PROC
 	
+	call GetTextColor
+	mov defaultColor, al
+
 	INVOKE printString, ADDR dateHeader
 	INVOKE setTxtColor, colorCode
 	INVOKE getDateTimeComponent, DATE

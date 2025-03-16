@@ -1,0 +1,14 @@
+; Last used at validatePassword line 44
+
+INVOKE Str_length, inputPassword
+    mov ecx, eax
+    ; Check inputPassword hex value
+    checkHex:
+        mov al, [esi]
+        call WriteHex
+        mov al, ' '
+        call WriteChar
+        inc esi
+        LOOP checkHex
+
+        sub esi, 7

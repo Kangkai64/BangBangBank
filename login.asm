@@ -1,27 +1,29 @@
 
 INCLUDE BangBangBank.inc
 
-;----------------------------------------------------------
+;------------------------------------------------------------------------
 ; This module will print the login design onto the console
 ; and calls the functions for login.
 ; Receives : Nothing
-; Returns : Nothing
+; Returns : Carry flag is set if login failed, clear if login successful
 ; Last update: 15/3/2025
-;----------------------------------------------------------
+;------------------------------------------------------------------------
 .data
 loginDesign BYTE "Bang Bang Bank Login", NEWLINE,
             "==============================", NEWLINE,
             "User Login", NEWLINE,
             "==============================", NEWLINE, 0
-inputUsername BYTE 255 DUP(?)
-inputPassword BYTE 255 DUP(?)
-currentTime SYSTEMTIME <>
+
 loginAttemptLimitReachedMsg BYTE "You have reached your login attempt limit. Please try again at ", 0
 unlockTimeMsg BYTE " hours.", NEWLINE, 0
 loginSuccessMsg BYTE "Login successful! Welcome to Bang Bang Bank.", NEWLINE, 0
 loginFailMsg BYTE "Login failed. Incorrect username or password.", NEWLINE, 0
 loginAttemptsLeftMsg BYTE "You have ", 0
-attemptsRemaining BYTE " attempts remaining.", NEWLINE, 0
+attemptsRemaining BYTE "  attempts remaining.", NEWLINE, 0
+
+inputUsername BYTE 255 DUP(?)
+inputPassword BYTE 255 DUP(?)
+currentTime SYSTEMTIME <>
 user userCredential <>
 tempTime BYTE 32 DUP(?)
 unlockHour BYTE 16 DUP(?)
@@ -52,6 +54,7 @@ login PROC
     INVOKE GetLocalTime, ADDR currentTime
     
     ; Check if account is locked
+
     INVOKE validateLoginTime, ADDR user.loginAttempt, ADDR user.firstLoginAttemptTimestamp
     cmp eax, 1
     jne notLocked
@@ -76,7 +79,7 @@ login PROC
     
     ; Convert to number
     lea esi, unlockHour
-    call parseNumber
+    call StringToInt
     
     ; Add 5 hours for unlock time
     add eax, 5
@@ -95,13 +98,13 @@ sameDay:
     
     ; Login failed due to lockout
     mov eax, 0
+    STC ; displayMainMenu
     jmp loginExit
     
 notLocked:
     ; Validate password
-    INVOKE validatePassword, OFFSET inputPassword, OFFSET user.hashed_password, OFFSET user.encryption_key
-    cmp eax, 1
-    je loginSuccess
+    INVOKE validatePassword, ADDR inputPassword, ADDR user.hashed_password, ADDR user.encryption_key
+    jnc loginSuccess
     
     ; Login failed - increment attempt counter
     mov esi, OFFSET user.loginAttempt
@@ -112,11 +115,11 @@ notLocked:
     jne notFirstAttempt
     
     ; Store current time as first login attempt timestamp
-    INVOKE formatSystemTime, OFFSET currentTime, OFFSET user.firstLoginAttemptTimestamp
+    INVOKE formatSystemTime, ADDR currentTime, ADDR user.firstLoginAttemptTimestamp
     
 notFirstAttempt:
-    ; Increment login attempt counter if not at max (9)
-    cmp al, '9'
+    ; Increment login attempt counter if not at max (3)
+    cmp al, '3'
     je counterAtMax
     
     inc al
@@ -136,25 +139,21 @@ counterAtMax:
     jle noAttemptsLeft
     
     ; Display login failed message with attempts remaining
-    mov edx, OFFSET loginFailMsg
-    call WriteString
-    
-    mov edx, OFFSET loginAttemptsLeftMsg
-    call WriteString
+    INVOKE printString, ADDR loginFailMsg
+    INVOKE printString, ADDR loginAttemptsLeftMsg
     
     ; Display number of attempts remaining
     mov BYTE PTR [OFFSET attemptsRemaining], al
-    mov edx, OFFSET attemptsRemaining
-    call WriteString
+    INVOKE printString, ADDR attemptsRemaining
     
-    mov eax, 0  ; Return login failed
+    STC  ; Return login failed
     jmp loginExit
     
 noAttemptsLeft:
     ; Display login failed message without attempts remaining
     INVOKE printString, ADDR loginFailMsg
     
-    mov eax, 0  ; Return login failed
+    STC  ; Return login failed
     jmp loginExit
     
 loginSuccess:
@@ -170,7 +169,7 @@ loginSuccess:
     ; Display success message
     INVOKE printString, ADDR loginSuccessMsg
     
-    mov eax, 1  ; Return login succeeded
+    CLC  ; Return login succeeded
     
 loginExit:
     ret
