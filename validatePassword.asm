@@ -37,12 +37,6 @@ validatePassword PROC,
     push ecx                ; Save registers
     push esi
     push edi
-    
-    ; Tried to check their content
-    INVOKE printString, esi
-    call Crlf
-    INVOKE printString, edi
-    call Crlf
 
 compareLoop:
     mov al, [esi]

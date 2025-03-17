@@ -103,14 +103,18 @@ parseCSVField PROTO
 parseUserCredentials PROTO,
     user: PTR userCredential
 
-Str_cat PROTO,
-    sourceString : PTR BYTE,
-    targetString : PTR BYTE
-
 convertHexToString PROTO,
     source: PTR BYTE,
     destination: PTR BYTE,
     byteCount: DWORD
+
+Str_cat PROTO,
+    sourceString : PTR BYTE,
+    targetString : PTR BYTE
+
+myStr_trim PROTO,
+    pString:PTR BYTE,
+    char: BYTE
 
 ;-------------------------
 ; Procedure Prototype
@@ -146,9 +150,6 @@ encrypt PROTO,
 
 inputFromFile PROTO,
     user: PTR userCredential
-
-outputToFile PROTO,
-    userPtr:PTR userCredential
 
 validateLoginTime PROTO,
     loginAttempt: PTR BYTE,

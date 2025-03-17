@@ -203,67 +203,56 @@ inputFromFile ENDP
 ;--------------------------------------------------------------------------------
 ParseUserCredentials PROC,
     user: PTR userCredential
-    ; Reset fieldIndex
-    mov fieldIndex, 0
     
 parseNextCredField:
-    ; Parse the field
+    ; Parse username field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
+    mov edi, [user]
+    add edi, OFFSET userCredential.username
+    INVOKE Str_copy, ADDR fieldBuffer, edi
     
-    ; Process based on field index
-    mov eax, fieldIndex
+    ; Parse hashed_password field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, [user]
+    add edi, OFFSET userCredential.hashed_password
+    INVOKE Str_copy, ADDR fieldBuffer, edi
     
-    .IF eax == 0       ; username
-        mov edi, [user]
-        add edi, OFFSET userCredential.username
-        INVOKE Str_copy, ADDR fieldBuffer, edi
+    ; Parse hashed_pin field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, [user]
+    add edi, OFFSET userCredential.hashed_pin
+    INVOKE Str_copy, ADDR fieldBuffer, edi
     
-    .ELSEIF eax == 1   ; hashed_password
-        mov edi, [user]
-        add edi, OFFSET userCredential.hashed_password
-        INVOKE Str_copy, ADDR fieldBuffer, edi
+    ; Parse customer_id field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, [user]
+    add edi, OFFSET userCredential.customer_id
+    INVOKE Str_copy, ADDR fieldBuffer, edi
     
-    .ELSEIF eax == 2   ; hashed_pin
-        mov edi, [user]
-        add edi, OFFSET userCredential.hashed_pin
-        INVOKE Str_copy, ADDR fieldBuffer, edi
+    ; Parse encryption_key field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, [user]
+    add edi, OFFSET userCredential.encryption_key
+    INVOKE Str_copy, ADDR fieldBuffer, edi
     
-    .ELSEIF eax == 3   ; customer_id
-        mov edi, [user]
-        add edi, OFFSET userCredential.customer_id
-        INVOKE Str_copy, ADDR fieldBuffer, edi
+    ; Parse loginAttempt field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, [user]
+    add edi, OFFSET userCredential.loginAttempt
+    INVOKE Str_copy, ADDR fieldBuffer, edi
     
-    .ELSEIF eax == 4   ; encryption_key
-        mov edi, [user]
-        add edi, OFFSET userCredential.encryption_key
-        INVOKE Str_copy, ADDR fieldBuffer, edi
-    
-    .ELSEIF eax == 5   ; loginAttempt
-        mov edi, [user]
-        add edi, OFFSET userCredential.loginAttempt
-        INVOKE Str_copy, ADDR fieldBuffer, edi
-    
-    .ELSEIF eax == 6   ; firstLoginAttemptTimestamp
-        mov edi, [user]
-        add edi, OFFSET userCredential.firstLoginAttemptTimestamp
-        INVOKE Str_copy, ADDR fieldBuffer, edi
-    
-    .ENDIF
-    
-    ; Increment field index
-    inc fieldIndex
-    
-    ; Check if we've reached end of line or file
-    cmp BYTE PTR [esi], 0   ; End of buffer?
-    je doneParsingFields
-    cmp BYTE PTR [esi], 13  ; CR?
-    je doneParsingFields
-    cmp BYTE PTR [esi], 10  ; LF?
-    je doneParsingFields
-    
-    ; Continue to next field
-    jmp parseNextCredField
+    ; Parse firstLoginAttemptTimestamp field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, [user]
+    add edi, OFFSET userCredential.firstLoginAttemptTimestamp
+    INVOKE Str_copy, ADDR fieldBuffer, edi
     
 doneParsingFields:
     ret

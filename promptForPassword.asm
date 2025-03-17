@@ -9,7 +9,7 @@ INCLUDE BangBangBank.inc
 ; Last update: 15/3/2025
 ;------------------------------------------------------------------------
 .data
-promptPasswordMsg BYTE "Please enter your password:", 0
+promptPasswordMsg BYTE "Please enter your password: ", 0
 asterisk BYTE "*", 0
 backspace = 8   ; ASCII value for backspace
 enterKey = 13      ; ASCII value for enter key
@@ -75,7 +75,7 @@ finishReading:
     
     call Crlf
     ; Trims the password
-    INVOKE Str_trim, inputPasswordAddress, " "
+    INVOKE myStr_trim, inputPasswordAddress, " "
 
     popad
     ret

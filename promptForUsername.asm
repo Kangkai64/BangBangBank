@@ -10,7 +10,7 @@ INCLUDE BangBangBank.inc
 ;------------------------------------------------------------------------
 
 .data
-promptUsernameMsg BYTE "Please enter your username:", 0 
+promptUsernameMsg BYTE "Please enter your username: ", 0 
 
 .code
 promptForUsername PROC,
@@ -25,7 +25,7 @@ promptForUsername PROC,
     call ReadString
 
     ; Trims the username
-    INVOKE Str_trim, inputUsernameAddress, " "
+    INVOKE myStr_trim, inputUsernameAddress, " "
 
     popad
     ret

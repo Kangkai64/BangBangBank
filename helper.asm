@@ -281,15 +281,21 @@ single_digit:
 IntToString ENDP
 
 ;--------------------------------------------------------------------------------
-; ParseCSVField: Parse the next field from the CSV format
+; ParseCSVField PROC
+; Parse the next field from the CSV format and trim leading/trailing spaces
 ; Receives: ESI = pointer to source buffer, EDI = pointer to destination buffer
-; Returns: ESI = updated pointer position, EDI = updated with next field
+; Returns: ESI = updated pointer position, trimmed field stored in destination buffer
 ;--------------------------------------------------------------------------------
 parseCSVField PROC USES eax ecx edx
+    LOCAL tempPtr:DWORD
+    
+    ; Save starting position of destination buffer
+    mov tempPtr, edi
+    
     ; Parse until comma or newline
     parseLoop:
         mov al, [esi]
-        cmp al, 0         ; End of buffer?
+        cmp al, 0          ; End of buffer?
         je endOfField
         cmp al, ','        ; Comma?
         je fieldEnd
@@ -307,7 +313,6 @@ parseCSVField PROC USES eax ecx edx
     fieldEnd:
         ; Skip comma
         inc esi
-        INVOKE Str_trim, edi, " "
         jmp terminateField
         
     endOfLine:
@@ -328,6 +333,12 @@ parseCSVField PROC USES eax ecx edx
         
     terminateField:
         mov BYTE PTR [edi], 0  ; Add null terminator
+        
+        ; Trim both leading and trailing spaces from the field
+        push esi                ; Save ESI as Str_trim might modify it
+        mov edi, tempPtr       ; Pass the start of our buffer to Str_trim
+        INVOKE myStr_trim, edi, " "  ; This should trim both leading and trailing spaces
+        pop esi                 ; Restore ESI
         
     parseFieldDone:
         ret
@@ -444,4 +455,72 @@ Str_cat PROC USES esi edi,
     
     ret
 Str_cat ENDP
+
+;------------------------------------------------------------------
+; Str_trim : Remove all occurrences of a given delimiter character
+;            from both the beginning and end of a string.
+; Receives : The address / pointer to the string
+; Returns: nothing
+;------------------------------------------------------------------
+myStr_trim PROC USES eax ecx esi edi,
+    pString:PTR BYTE,
+    char: BYTE           
+
+    LOCAL originalLen:DWORD
+
+    ; Step 1: Check for empty string
+    mov esi,pString      ; ESI = source pointer
+    INVOKE Str_length,esi ; returns the length in EAX
+    cmp eax,0            ; is the length equal to zero?
+    je trimFinish        ; yes: exit now
+    mov originalLen,eax  ; store original length
+
+    ; Step 2: Find first non-delimiter character
+    mov edi,pString      ; EDI = destination pointer
+    mov ecx,eax          ; ECX = string length
+    mov esi,pString      ; ESI = source pointer (start of string)
+
+SkipLeading:
+    mov al,[esi]         ; get a character from source
+    cmp al,0             ; check for end of string
+    je EndOfString       ; if end of string, all chars are delimiters
+    cmp al,char          ; is it the delimiter?
+    jne TrimTrailing     ; no: move to trimming trailing delimiters
+    inc esi              ; yes: skip this character
+    dec ecx              ; decrement count
+    jnz SkipLeading      ; continue if not end of string
+
+EndOfString:
+    ; If we get here, the string only contained delimiters
+    mov edi,pString      ; point back to start
+    mov BYTE PTR [edi],0 ; make it an empty string
+    jmp trimFinish
+
+TrimTrailing:
+    ; Step 3: Find the position of the last non-delimiter character
+    mov edi,pString
+    add edi,originalLen  ; point to position after the last character
+    dec edi              ; point to the last character
+
+FindLastChar:
+    mov al,[edi]         ; get character from end
+    cmp al,char          ; is it the delimiter?
+    jne CopyString       ; no: found last non-delimiter
+    dec edi              ; yes: move backward
+    dec ecx              ; decrement count
+    jnz FindLastChar     ; continue if not beginning of string
+
+    ; If we get here, we've checked the entire string
+    ; and every character is a delimiter, make it empty
+    mov edi,pString
+    mov BYTE PTR [edi],0
+    jmp trimFinish
+
+CopyString:
+    ; Step 4: Copy characters from start position to end position
+    INVOKE Str_copy, esi, pString
+
+trimFinish:
+    ret
+myStr_trim ENDP
 END

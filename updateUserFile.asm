@@ -91,7 +91,7 @@ readFileOpened:
     
     ; Check if file opened successfully
     cmp eax, INVALID_HANDLE_VALUE
-    jne writeFileOpened
+    jne processNextLine
     
     ; File open error
     INVOKE printString, ADDR fileWriteErrorMsg
@@ -101,15 +101,6 @@ readFileOpened:
     INVOKE CloseHandle, fileReadHandle
     mov eax, 0  ; Return failure
     jmp updateExit
-    
-writeFileOpened:
-    ; First, copy the header line to the new file
-    INVOKE WriteFile,
-        fileWriteHandle,
-        ADDR headerLine,
-        SIZEOF headerLine - 1,  ; Exclude null terminator
-        ADDR bytesWritten,
-        NULL
     
     ; Process file line by line
 processNextLine:
@@ -127,24 +118,7 @@ processNextLine:
     ; Extract username from line (first field before comma)
     mov esi, OFFSET readLineBuffer
     mov edi, OFFSET tempUserBuffer
-    
-    ; Copy characters until comma or end
-extractUsername:
-    mov al, [esi]
-    cmp al, 0         ; End of string?
-    je endOfUsername
-    cmp al, ','       ; Comma?
-    je endOfUsername
-    
-    ; Copy character
-    mov [edi], al
-    inc esi
-    inc edi
-    jmp extractUsername
-    
-endOfUsername:
-    ; Add null terminator
-    mov BYTE PTR [edi], 0
+    call parseCSVField
     
     ; Compare with username from user struct
     mov edi, user
@@ -169,10 +143,7 @@ endOfUsername:
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
+    call addComma
     
     ; Add hashed_password
     mov edx, user
@@ -181,10 +152,7 @@ endOfUsername:
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
+    call addComma
     
     ; Add hashed_pin
     mov edx, user
@@ -193,10 +161,7 @@ endOfUsername:
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
+    call addComma
     
     ; Add customer_id
     mov edx, user
@@ -205,10 +170,7 @@ endOfUsername:
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
+    call addComma
     
     ; Add encryption_key
     mov edx, user
@@ -217,20 +179,14 @@ endOfUsername:
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
+    call addComma
     
     ; Add loginAttempt (reset to 0 after successful login)
     mov eax, OFFSET zeroVal
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
+    call addComma
     
     ; Add firstLoginAttemptTimestamp (reset to - after successful login)
     mov eax, OFFSET dashVal
@@ -243,10 +199,12 @@ endOfUsername:
     INVOKE Str_cat, eax, edx
     
     ; Write updated line to file
+    INVOKE Str_length, ADDR outputBuffer
+    mov ecx, eax                         
     INVOKE WriteFile,
         fileWriteHandle,
         ADDR outputBuffer,
-        SIZEOF outputBuffer,
+        ecx,                             
         ADDR bytesWritten,
         NULL
     
@@ -295,10 +253,7 @@ processingComplete:
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
+   call addComma
     
     ; Add hashed_password
     mov edx, user
@@ -307,10 +262,7 @@ processingComplete:
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
+    call addComma
     
     ; Add hashed_pin
     mov edx, user
@@ -319,10 +271,7 @@ processingComplete:
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
+    call addComma
     
     ; Add customer_id
     mov edx, user
@@ -331,10 +280,7 @@ processingComplete:
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
+    call addComma
     
     ; Add encryption_key
     mov edx, user
@@ -343,20 +289,14 @@ processingComplete:
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
+    call addComma
     
     ; Add loginAttempt (0 for new user)
     mov eax, OFFSET zeroVal
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
+    call addComma
     
     ; Add firstLoginAttemptTimestamp (- for new user)
     mov eax, OFFSET dashVal
@@ -369,10 +309,12 @@ processingComplete:
     INVOKE Str_cat, eax, edx
     
     ; Write new user to file
+    INVOKE Str_length, ADDR outputBuffer
+    mov ecx, eax                         
     INVOKE WriteFile,
         fileWriteHandle,
         ADDR outputBuffer,
-        SIZEOF outputBuffer,
+        ecx,                             
         ADDR bytesWritten,
         NULL
     
@@ -699,4 +641,13 @@ changeDone:
     popad
     ret
 changeUserCredential ENDP
+
+addComma PROC
+    ; Add comma
+    mov eax, OFFSET commaChar
+    mov edx, OFFSET outputBuffer
+    INVOKE Str_cat, eax, edx
+
+    ret
+addComma ENDP
 END

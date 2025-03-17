@@ -103,7 +103,6 @@ sameDay:
     
 notLocked:
     ; Validate password
-    INVOKE printUserCredentials, ADDR user
     INVOKE validatePassword, ADDR inputPassword, ADDR user.hashed_password, ADDR user.encryption_key
     jnc loginSuccess
     
@@ -128,7 +127,7 @@ notFirstAttempt:
     
 counterAtMax:
     ; Update user file with new attempt count and timestamp
-    INVOKE outputToFile, OFFSET user
+    ; INVOKE updateUserFile, ADDR user
     
     ; Calculate remaining attempts
     mov al, '3'  ; Max attempts allowed
@@ -165,11 +164,11 @@ loginSuccess:
     mov BYTE PTR [esi+1], 0
     
     ; Update user file with reset attempt count
-    INVOKE outputToFile, OFFSET user
+    ; INVOKE updateUserFile, ADDR user
     
     ; Display success message
     INVOKE printString, ADDR loginSuccessMsg
-    
+
     CLC  ; Return login succeeded
     
 loginExit:
