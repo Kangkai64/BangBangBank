@@ -9,8 +9,6 @@ formatSystemTime PROC,
     systemTimePtr:PTR SYSTEMTIME,
     outputBuffer:PTR BYTE
     
-    LOCAL temp:DWORD
-    
     pushad
     
     ; Get the system time structure pointer
@@ -25,11 +23,27 @@ formatSystemTime PROC,
     ; Single digit day, add leading zero
     mov BYTE PTR [edi], '0'
     inc edi
+    mov al, BYTE PTR [esi].SYSTEMTIME.wDay
+    add al, '0'        ; Convert to ASCII
+    mov [edi], al      ; Store digit
+    inc edi
+    jmp dayDone
     
 dayTwoDigits:
+    ; Two digit day - handle directly
     movzx eax, WORD PTR [esi].SYSTEMTIME.wDay
-    call IntToString
+    mov ebx, 10
+    xor edx, edx
+    div ebx            ; EAX = tens, EDX = ones
+    add al, '0'        ; Convert tens to ASCII
+    mov [edi], al      ; Store tens digit
+    inc edi
+    mov eax, edx
+    add al, '0'        ; Convert ones to ASCII
+    mov [edi], al      ; Store ones digit
+    inc edi
     
+dayDone:
     ; Add slash
     mov BYTE PTR [edi], '/'
     inc edi
@@ -42,11 +56,27 @@ dayTwoDigits:
     ; Single digit month, add leading zero
     mov BYTE PTR [edi], '0'
     inc edi
+    mov al, BYTE PTR [esi].SYSTEMTIME.wMonth
+    add al, '0'        ; Convert to ASCII
+    mov [edi], al      ; Store digit
+    inc edi
+    jmp monthDone
     
 monthTwoDigits:
+    ; Two digit month - handle directly
     movzx eax, WORD PTR [esi].SYSTEMTIME.wMonth
-    call IntToString
+    mov ebx, 10
+    xor edx, edx
+    div ebx            ; EAX = tens, EDX = ones
+    add al, '0'        ; Convert tens to ASCII
+    mov [edi], al      ; Store tens digit
+    inc edi
+    mov eax, edx
+    add al, '0'        ; Convert ones to ASCII
+    mov [edi], al      ; Store ones digit
+    inc edi
     
+monthDone:
     ; Add slash
     mov BYTE PTR [edi], '/'
     inc edi
@@ -55,35 +85,36 @@ monthTwoDigits:
     movzx eax, WORD PTR [esi].SYSTEMTIME.wYear
     
     ; For year we need to handle 4 digits
-    mov temp, eax
-    mov ebx, 1000  ; Divisor for thousands place
+    ; Thousands place
+    mov ebx, 1000
     xor edx, edx
-    
-    ; Convert each digit
-    mov eax, temp
-    div ebx         ; EAX = thousands digit, EDX = remainder
-    add al, '0'     ; Convert to ASCII
-    mov [edi], al   ; Store digit
+    div ebx                 ; EAX = thousands, EDX = remainder
+    add al, '0'             ; Convert to ASCII
+    mov [edi], al           ; Store digit
     inc edi
     
-    mov eax, edx    ; Move remainder to EAX
-    mov ebx, 100    ; Divisor for hundreds place
-    xor edx, edx    ; Clear EDX for division
-    div ebx         ; EAX = hundreds digit, EDX = remainder
-    add al, '0'     ; Convert to ASCII
-    mov [edi], al   ; Store digit
+    ; Hundreds place
+    mov eax, edx
+    mov ebx, 100
+    xor edx, edx
+    div ebx                 ; EAX = hundreds, EDX = remainder
+    add al, '0'             ; Convert to ASCII
+    mov [edi], al           ; Store digit
     inc edi
     
-    mov eax, edx    ; Move remainder to EAX
-    mov ebx, 10     ; Divisor for tens place
-    xor edx, edx    ; Clear EDX for division
-    div ebx         ; EAX = tens digit, EDX = remainder
-    add al, '0'     ; Convert to ASCII
-    mov [edi], al   ; Store digit
+    ; Tens place
+    mov eax, edx
+    mov ebx, 10
+    xor edx, edx
+    div ebx                 ; EAX = tens, EDX = remainder
+    add al, '0'             ; Convert to ASCII
+    mov [edi], al           ; Store digit
     inc edi
     
-    add dl, '0'     ; Convert ones digit to ASCII
-    mov [edi], dl   ; Store digit
+    ; Ones place
+    mov eax, edx
+    add al, '0'             ; Convert to ASCII
+    mov [edi], al           ; Store digit
     inc edi
     
     ; Add space
@@ -98,11 +129,27 @@ monthTwoDigits:
     ; Single digit hour, add leading zero
     mov BYTE PTR [edi], '0'
     inc edi
+    mov al, BYTE PTR [esi].SYSTEMTIME.wHour
+    add al, '0'        ; Convert to ASCII
+    mov [edi], al      ; Store digit
+    inc edi
+    jmp hourDone
     
 hourTwoDigits:
+    ; Two digit hour - handle directly
     movzx eax, WORD PTR [esi].SYSTEMTIME.wHour
-    call IntToString
+    mov ebx, 10
+    xor edx, edx
+    div ebx            ; EAX = tens, EDX = ones
+    add al, '0'        ; Convert tens to ASCII
+    mov [edi], al      ; Store tens digit
+    inc edi
+    mov eax, edx
+    add al, '0'        ; Convert ones to ASCII
+    mov [edi], al      ; Store ones digit
+    inc edi
     
+hourDone:
     ; Add colon
     mov BYTE PTR [edi], ':'
     inc edi
@@ -115,11 +162,27 @@ hourTwoDigits:
     ; Single digit minute, add leading zero
     mov BYTE PTR [edi], '0'
     inc edi
+    mov al, BYTE PTR [esi].SYSTEMTIME.wMinute
+    add al, '0'        ; Convert to ASCII
+    mov [edi], al      ; Store digit
+    inc edi
+    jmp minuteDone
     
 minuteTwoDigits:
+    ; Two digit minute - handle directly
     movzx eax, WORD PTR [esi].SYSTEMTIME.wMinute
-    call IntToString
+    mov ebx, 10
+    xor edx, edx
+    div ebx            ; EAX = tens, EDX = ones
+    add al, '0'        ; Convert tens to ASCII
+    mov [edi], al      ; Store tens digit
+    inc edi
+    mov eax, edx
+    add al, '0'        ; Convert ones to ASCII
+    mov [edi], al      ; Store ones digit
+    inc edi
     
+minuteDone:
     ; Add colon
     mov BYTE PTR [edi], ':'
     inc edi
@@ -132,17 +195,49 @@ minuteTwoDigits:
     ; Single digit second, add leading zero
     mov BYTE PTR [edi], '0'
     inc edi
+    mov al, BYTE PTR [esi].SYSTEMTIME.wSecond
+    add al, '0'        ; Convert to ASCII
+    mov [edi], al      ; Store digit
+    inc edi
+    jmp secondDone
     
 secondTwoDigits:
+    ; Two digit second - handle directly
     movzx eax, WORD PTR [esi].SYSTEMTIME.wSecond
-    call IntToString
+    mov ebx, 10
+    xor edx, edx
+    div ebx            ; EAX = tens, EDX = ones
+    add al, '0'        ; Convert tens to ASCII
+    mov [edi], al      ; Store tens digit
+    inc edi
+    mov eax, edx
+    add al, '0'        ; Convert ones to ASCII
+    mov [edi], al      ; Store ones digit
+    inc edi
     
+secondDone:
     ; Add null terminator
     mov BYTE PTR [edi], 0
     
     popad
     ret
 formatSystemTime ENDP
+
+;--------------------------------------------------------------------------------
+; This module will clear the user credential structure for each loop
+; Receives: Address / Pointer the user credential structure
+; Returns: Nothing
+;--------------------------------------------------------------------------------
+clearUserCredential PROC USES edi ecx,
+    pUser:PTR userCredential
+    
+    mov edi, pUser            
+    mov ecx, SIZEOF userCredential
+    mov al, 0                 
+    rep stosb                 
+    
+    ret
+clearUserCredential ENDP
 
 ;--------------------------------------------------------------------------------
 ; StringToInt: Converts an ASCII string to integer (supports signed integers)
@@ -167,7 +262,8 @@ StringToInt PROC USES ebx edx,
     
 parse_digits:
     xor eax, eax            ; Clear result
-    xor edx, edx            ; Digit counter
+    xor edx, edx
+    xor ecx, ecx            ; Digit counter
     
 digit_loop:
     mov dl, [esi]
@@ -181,15 +277,15 @@ digit_loop:
     sub dl, '0'             ; Convert ASCII to number
     add eax, edx            ; Add new digit
     inc esi                 ; Move to next character
-    inc ebx                 ; Increment digit counter
+    inc ecx                 ; Increment digit counter
     jmp digit_loop
     
 end_parse:
     ; If no digits were found, return 0
     cmp ebx, 1              ; Check if we only saw the negative sign
-    jnz apply_sign
+    jle apply_sign
     cmp ebx, 0              ; Or if we saw nothing at all
-    jnz apply_sign
+    jle apply_sign
     xor eax, eax            ; Return 0
     
 apply_sign:

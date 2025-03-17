@@ -5,93 +5,76 @@ INCLUDE BangBangBank.inc
 ; This module validates login time restrictions
 ; Receives: loginAttempt count and firstLoginAttemptTimestamp
 ; Returns: EAX = 1 if locked out, 0 if not locked out
-; Last update: 15/3/2025
+; Last update: 17/3/2025
 ;--------------------------------------------------------------------------------
+
 .data
 currentTime          SYSTEMTIME <>
-attemptTimeBuffer   BYTE 64 DUP(?)
-attemptDay          DWORD ?
-attemptMonth        DWORD ?  
-attemptYear         DWORD ?
 attemptHour         DWORD ?
-attemptMinute       DWORD ?
-attemptSecond       DWORD ?
 currentHour         DWORD ?
 hourDiff            DWORD ?
 
-; Constants for time parsing
-slash              BYTE "/", 0
-space              BYTE " ", 0
-colon              BYTE ":", 0
-
 .code
 validateLoginTime PROC,
-    loginAttempt: PTR BYTE,
-    firstLoginTimestamp: PTR BYTE
+    user: PTR userCredential
     
     pushad
     
+    mov edi, user
     ; Check if loginAttempt > 3
-    mov esi, loginAttempt
+    lea esi, (userCredential PTR [edi]).loginAttempt
     xor eax, eax
     mov al, [esi]
     sub al, '0'  ; Convert ASCII to number
     cmp al, 3
-    jle notLockedOut  ; If attempts <= 3, not locked out
+    jl notLockedOut  ; If attempts < 3, not locked out
     
     ; Check if timestamp is "-" (no previous attempts)
-    mov esi, firstLoginTimestamp
+    lea esi, (userCredential PTR [edi]).firstLoginAttemptTimestamp
     mov al, [esi]
     cmp al, '-'
     je notLockedOut   ; If no timestamp, not locked out
     
     ; Get current time
     invoke GetLocalTime, ADDR currentTime
+    
+    ; Get current hour
     movzx eax, currentTime.wHour
     mov currentHour, eax
     
-    ; Parse the timestamp (format: DD/MM/YYYY HH:MM:SS)
-    mov esi, firstLoginTimestamp
+    ; Get hour from timestamp (DD/MM/YYYY HH:MM:SS format)
+    lea esi, (userCredential PTR [edi]).firstLoginAttemptTimestamp
     
-    ; Extract day
-    call StringToInt
-    mov attemptDay, eax
+    ; Parse timestamp - skip over DD/MM/YYYY and space to get to HH
+    add esi, 12
     
-    ; Skip slash
-    add esi, 1
-    
-    ; Extract month
-    call StringToInt
-    mov attemptMonth, eax
-    
-    ; Skip slash
-    add esi, 1
-    
-    ; Extract year
-    call StringToInt
-    mov attemptYear, eax
-    
-    ; Skip space
-    add esi, 1
-    
-    ; Extract hour
-    call StringToInt
+    ; Now ESI points to the HH part
+    xor eax, eax
+    mov al, [esi]     ; Get first digit
+    sub al, '0'       ; Convert from ASCII
+    mov ebx, 10
+    mul ebx           ; Multiply by 10
+    mov bl, [esi+1]   ; Get second digit
+    sub bl, '0'       ; Convert from ASCII
+    add eax, ebx      ; Add to get full hour value
     mov attemptHour, eax
     
     ; Calculate hours difference
     mov eax, currentHour
     sub eax, attemptHour
     
-    ; Handle day boundary crossing
+    ; Handle day boundary crossing (if current hour < attempt hour)
     cmp eax, 0
     jge hourDiffPositive
     add eax, 24  ; Add 24 hours if current < attempt
-    
 hourDiffPositive:
     mov hourDiff, eax
     
     ; Check if within 5 hour lockout period
     cmp hourDiff, 5
+    .IF hourDiff >= 5
+        INVOKE resetLoginAttempt, user
+    .ENDIF
     jge notLockedOut  ; If 5+ hours passed, not locked out
     
     ; User is locked out

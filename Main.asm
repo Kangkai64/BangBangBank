@@ -20,6 +20,9 @@ main PROC
 	
 	mainMenu:
 		call displayMainMenu
+		.IF CARRY?
+			call Clrscr
+		.ENDIF
 		jc mainMenu
 
 	call Crlf

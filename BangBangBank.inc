@@ -24,7 +24,7 @@ userCredential STRUCT
 	hashed_pin BYTE 32 DUP(?)
 	customer_id BYTE 32 DUP(?)
 	encryption_key BYTE 32 DUP(?)
-	loginAttempt BYTE 16 DUP(?)
+	loginAttempt BYTE 4 DUP(?)
 	firstLoginAttemptTimestamp BYTE 32 DUP(?)
 userCredential ENDS
 
@@ -89,6 +89,9 @@ formatSystemTime PROTO,
     systemTimePtr:PTR SYSTEMTIME,
     outputBuffer:PTR BYTE
 
+clearUserCredential PROTO,
+    pUser:PTR userCredential
+
 StringToInt PROTO,
     pString: PTR BYTE
 
@@ -152,8 +155,7 @@ inputFromFile PROTO,
     user: PTR userCredential
 
 validateLoginTime PROTO,
-    loginAttempt: PTR BYTE,
-    firstLoginTimestamp: PTR BYTE
+    user: PTR userCredential
 
 validatePassword PROTO,
     inputPassword: PTR BYTE,
@@ -161,6 +163,9 @@ validatePassword PROTO,
     encryptionKey: PTR BYTE
 
 updateUserFile PROTO,
+    user: PTR userCredential
+
+resetLoginAttempt PROTO,
     user: PTR userCredential
 
 readAccountFile PROTO,

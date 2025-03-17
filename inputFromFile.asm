@@ -1,10 +1,10 @@
+
 INCLUDE BangBangBank.inc
 
 ;--------------------------------------------------------------------------------
 ; This module will read user credentials from a single file containing all users
 ; Receives: Pointer to userCredential structure (user)
-; Returns: Filled user credential structure if credentials match
-;          Carry flag clear if file opened successfully, set if failed
+; Returns: Nothing
 ; Last update: 16/3/2025
 ;--------------------------------------------------------------------------------
 
@@ -20,7 +20,7 @@ fileHandle         DWORD ?
 readBuffer         BYTE 20480 DUP(?)  ; Larger buffer for multi-user file
 errorMsg           BYTE "Error: File cannot be opened or read", NEWLINE, 0
 pathErrorMsg       BYTE "Error: Invalid file path", NEWLINE, 0
-notFoundMsg        BYTE "Invalid username or password", NEWLINE, 0
+userNotFoundMsg    BYTE NEWLINE, "User not found.", NEWLINE, 0
 bytesRead          DWORD ?
 tempBuffer         BYTE 512 DUP(?)
 fieldBuffer        BYTE 512 DUP(?)
@@ -91,16 +91,13 @@ fileOpenSuccess:
         INVOKE printString, ADDR errorMsg
         call Wait_Msg
         STC ; Set carry flag
-        jmp closeAndExit
+        jmp inputFileExit
     .ENDIF
     
     ; Add null terminator to buffer
     mov edi, OFFSET readBuffer
     add edi, bytesRead
     mov BYTE PTR [edi], 0
-    
-    ; Close the file
-    INVOKE CloseHandle, fileHandle
     
     ; Skip the header line
     mov esi, OFFSET readBuffer
@@ -179,17 +176,13 @@ nextLine:
     jmp searchUserLoop
     
 userNotFound:
-    INVOKE printString, ADDR notFoundMsg
+    INVOKE printString, OFFSET userNotFoundMsg
     call Wait_Msg
-    STC ; Set carry flag
-    
-closeAndExit:
-    ; Make sure file is closed
-    .IF fileHandle != INVALID_HANDLE_VALUE
-        INVOKE CloseHandle, fileHandle
-    .ENDIF
+    mov eax, FALSE
+    mov [esp+28], eax
     
 inputFileExit:
+    INVOKE CloseHandle, fileHandle
     popad
     ret
 inputFromFile ENDP
@@ -208,49 +201,49 @@ parseNextCredField:
     ; Parse username field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
-    mov edi, [user]
+    mov edi, user
     add edi, OFFSET userCredential.username
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
     ; Parse hashed_password field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
-    mov edi, [user]
+    mov edi, user
     add edi, OFFSET userCredential.hashed_password
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
     ; Parse hashed_pin field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
-    mov edi, [user]
+    mov edi, user
     add edi, OFFSET userCredential.hashed_pin
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
     ; Parse customer_id field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
-    mov edi, [user]
+    mov edi, user
     add edi, OFFSET userCredential.customer_id
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
     ; Parse encryption_key field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
-    mov edi, [user]
+    mov edi, user
     add edi, OFFSET userCredential.encryption_key
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
     ; Parse loginAttempt field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
-    mov edi, [user]
+    mov edi, user
     add edi, OFFSET userCredential.loginAttempt
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
     ; Parse firstLoginAttemptTimestamp field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
-    mov edi, [user]
+    mov edi, user
     add edi, OFFSET userCredential.firstLoginAttemptTimestamp
     INVOKE Str_copy, ADDR fieldBuffer, edi
     

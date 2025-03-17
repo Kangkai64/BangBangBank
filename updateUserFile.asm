@@ -1,9 +1,10 @@
+
 INCLUDE BangBangBank.inc
 
 ;--------------------------------------------------------------------------------
 ; This module updates user credentials in the credentials file
 ; Receives: User credential structure
-; Returns: Success flag (EAX = 0 for failure, 1 for success)
+; Returns : Carry flag is set if failed, clear if successful
 ; Last update: 16/3/2025
 ;--------------------------------------------------------------------------------
 .data
@@ -14,7 +15,6 @@ fileReadHandle       DWORD ?
 fileWriteHandle      DWORD ?
 bytesRead            DWORD ?
 bytesWritten         DWORD ?
-writeSuccess         DWORD ?
 
 ; Buffers
 readLineBuffer       BYTE 1024 DUP(?)  ; Buffer for reading lines
@@ -51,7 +51,7 @@ updateUserFile PROC,
     
     ; Initialize userFound flag
     mov userFound, 0
-    
+
     ; Open source file for reading
     INVOKE CreateFile,
         ADDR credentialSourceFile,
@@ -72,7 +72,7 @@ updateUserFile PROC,
     ; File open error
     INVOKE printString, ADDR fileReadErrorMsg
     call Crlf
-    mov eax, 0  ; Return failure
+    STC  ; Return failure
     jmp updateExit
     
 readFileOpened:
@@ -99,7 +99,7 @@ readFileOpened:
     
     ; Close read handle
     INVOKE CloseHandle, fileReadHandle
-    mov eax, 0  ; Return failure
+    STC ; Return failure
     jmp updateExit
     
     ; Process file line by line
@@ -126,8 +126,7 @@ processNextLine:
     INVOKE Str_compare, ADDR tempUserBuffer, edi
     
     ; If usernames match, write our updated record instead
-    cmp eax, 0
-    jne writeOriginalLine
+    jnz writeOriginalLine
     
     ; Username matched, mark as found
     mov userFound, 1
@@ -181,15 +180,19 @@ processNextLine:
     
     call addComma
     
-    ; Add loginAttempt (reset to 0 after successful login)
-    mov eax, OFFSET zeroVal
+    ; Add loginAttempt from user structure
+    mov edx, user
+    add edx, OFFSET userCredential.loginAttempt
+    mov eax, edx
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
     call addComma
     
-    ; Add firstLoginAttemptTimestamp (reset to - after successful login)
-    mov eax, OFFSET dashVal
+    ; Add firstLoginAttemptTimestamp
+    mov edx, user
+    add edx, OFFSET userCredential.firstLoginAttemptTimestamp
+    mov eax, edx
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx
     
@@ -237,86 +240,6 @@ writeOriginalLine:
     jmp processNextLine
     
 processingComplete:
-    ; Check if we found and updated the user
-    cmp userFound, 1
-    je fileUpdated
-    
-    ; User not found, add it to the end
-    ; Format user data line
-    mov edi, OFFSET outputBuffer
-    mov BYTE PTR [edi], 0   ; Start with empty string
-    
-    ; Add username
-    mov edx, user
-    add edx, OFFSET userCredential.username
-    mov eax, edx
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
-    
-   call addComma
-    
-    ; Add hashed_password
-    mov edx, user
-    add edx, OFFSET userCredential.hashed_password
-    mov eax, edx
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
-    
-    call addComma
-    
-    ; Add hashed_pin
-    mov edx, user
-    add edx, OFFSET userCredential.hashed_pin
-    mov eax, edx
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
-    
-    call addComma
-    
-    ; Add customer_id
-    mov edx, user
-    add edx, OFFSET userCredential.customer_id
-    mov eax, edx
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
-    
-    call addComma
-    
-    ; Add encryption_key
-    mov edx, user
-    add edx, OFFSET userCredential.encryption_key
-    mov eax, edx
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
-    
-    call addComma
-    
-    ; Add loginAttempt (0 for new user)
-    mov eax, OFFSET zeroVal
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
-    
-    call addComma
-    
-    ; Add firstLoginAttemptTimestamp (- for new user)
-    mov eax, OFFSET dashVal
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
-    
-    ; Add newline
-    mov eax, OFFSET eolMarker
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
-    
-    ; Write new user to file
-    INVOKE Str_length, ADDR outputBuffer
-    mov ecx, eax                         
-    INVOKE WriteFile,
-        fileWriteHandle,
-        ADDR outputBuffer,
-        ecx,                             
-        ADDR bytesWritten,
-        NULL
     
 fileUpdated:
     ; Close both files
@@ -331,7 +254,7 @@ fileUpdated:
     .IF eax == 0
         INVOKE printString, ADDR fileDeleteErrorMsg
         call Crlf
-        mov eax, 0  ; Return failure
+        STC ; Return failure
         jmp updateExit
     .ENDIF
     
@@ -342,21 +265,18 @@ fileUpdated:
     .IF eax == 0
         INVOKE printString, ADDR fileRenameErrorMsg
         call Crlf
-        mov eax, 0  ; Return failure
+        STC  ; Return failure
         jmp updateExit
     .ENDIF
     
     ; Success
-    mov eax, 1
+    CLC ; Return success
     
 updateExit:
-    ; Store return value
-    mov writeSuccess, eax
-    
     popad
     
     ; Return success flag
-    mov eax, writeSuccess
+    CLC
     ret
 updateUserFile ENDP
 
@@ -384,7 +304,8 @@ readCharLoop:
         NULL
     
     ; Check for EOF
-    cmp charBytesRead, 0
+    mov eax, charBytesRead
+    cmp eax, 0
     je endOfReadLine
     
     ; Check for CR (13)
@@ -443,101 +364,45 @@ readLineDone:
     ret
 ReadLineFromFile ENDP
 
-;--------------------------------------------------------------------------------
-; incrementLoginAttempt PROC
-; Increments the login attempt counter for a specified user
-; Receives: Pointer to username
-; Returns: EAX = 1 if successful, 0 if failed
-;--------------------------------------------------------------------------------
-incrementLoginAttempt PROC,
-    username: PTR BYTE
-    
-    LOCAL userCred: userCredential
-    LOCAL timeStr[30]: BYTE
-    
-    pushad
-    
-    ; Initialize userCredential structure
-    INVOKE Str_copy, username, ADDR userCred.username
-    
-    ; Read user record to get current data
-    INVOKE inputFromFile, ADDR userCred
-    
-    ; Check if user found
-    cmp eax, 0
-    je incrementFailed
-    
-    ; Convert string loginAttempt to number, increment, and convert back
-    lea edi, userCred.loginAttempt
-    INVOKE StringToInt, edi
-    inc eax
-    INVOKE IntToString
-    
-    ; If this is first attempt (was 0, now 1), set timestamp
-    cmp eax, 1
-    jne updateLoginAttempt
-    
-    ; Get current system time
-    INVOKE GetLocalTime, ADDR currTime
-    
-    ; Format timestamp: DD/MM/YYYY HH:MM:SS
-    INVOKE wsprintf, ADDR timeStr, ADDR timeStampFormat,
-        currTime.wDay,
-        currTime.wMonth,
-        currTime.wYear,
-        currTime.wHour,
-        currTime.wMinute,
-        currTime.wSecond
-    
-    ; Copy timestamp to firstLoginAttemptTimestamp
-    INVOKE Str_copy, ADDR timeStr, ADDR userCred.firstLoginAttemptTimestamp
-    
-updateLoginAttempt:
-    ; Update user record
-    INVOKE updateUserFile, ADDR userCred
-    jmp incrementDone
-    
-incrementFailed:
-    mov eax, 0
-    
-incrementDone:
-    popad
+;---------------------------------------------------------------
+; This module will add a comma when formatting data
+; Receives: The address / pointer of the output string in EDX
+; Returns: Nothing
+;---------------------------------------------------------------
+
+addComma PROC
+    ; Add comma
+    mov eax, OFFSET commaChar
+    mov edx, OFFSET outputBuffer
+    INVOKE Str_cat, eax, edx
+
     ret
-incrementLoginAttempt ENDP
+addComma ENDP
 
 ;--------------------------------------------------------------------------------
 ; resetLoginAttempt PROC
 ; Resets the login attempt counter and timestamp for a specified user
-; Receives: Pointer to username
-; Returns: EAX = 1 if successful, 0 if failed
+; Receives: Pointer to user credential structure
+; Returns : Carry flag is set if failed, clear if successful
 ;--------------------------------------------------------------------------------
 resetLoginAttempt PROC,
-    username: PTR BYTE
-    
-    LOCAL userCred: userCredential
+    user: PTR userCredential
     
     pushad
     
-    ; Initialize userCredential structure
-    INVOKE Str_copy, username, ADDR userCred.username
-    
-    ; Read user record to get current data
-    INVOKE inputFromFile, ADDR userCred
-    
-    ; Check if user found
-    cmp eax, 0
-    je resetFailed
-    
+    mov esi, user
+
     ; Reset loginAttempt to "0" and timestamp to "-"
-    INVOKE Str_copy, ADDR zeroVal, ADDR userCred.loginAttempt
-    INVOKE Str_copy, ADDR dashVal, ADDR userCred.firstLoginAttemptTimestamp
+    INVOKE Str_copy, ADDR zeroVal, ADDR (userCredential PTR [esi]).loginAttempt
+    INVOKE Str_copy, ADDR dashVal, ADDR (userCredential PTR [esi]).firstLoginAttemptTimestamp
     
     ; Update user record
-    INVOKE updateUserFile, ADDR userCred
+    INVOKE updateUserFile, ADDR user
+    CLC ; Return Success
     jmp resetDone
     
 resetFailed:
-    mov eax, 0
+    STC ; Return failure
     
 resetDone:
     popad
@@ -549,7 +414,7 @@ resetLoginAttempt ENDP
 ; Updates specific fields in a user's credentials
 ; Receives: Pointer to userCredential structure with fields to update
 ;           (only fields with non-empty values will be updated)
-; Returns: EAX = 1 if successful, 0 if failed
+; Returns : Carry flag is set if failed, clear if successful
 ;--------------------------------------------------------------------------------
 changeUserCredential PROC,
     newCred: PTR userCredential
@@ -567,8 +432,7 @@ changeUserCredential PROC,
     INVOKE inputFromFile, ADDR currCred
     
     ; Check if user found
-    cmp eax, 0
-    je changeFailed
+    jc changeFailed
     
     ; Check and update password if provided
     mov esi, newCred
@@ -632,22 +496,14 @@ checkTimestamp:
 updateCredentials:
     ; Write the updated user credentials
     INVOKE updateUserFile, ADDR currCred
+    CLC ; Return Success
     jmp changeDone
     
 changeFailed:
-    mov eax, 0
+    STC
     
 changeDone:
     popad
     ret
 changeUserCredential ENDP
-
-addComma PROC
-    ; Add comma
-    mov eax, OFFSET commaChar
-    mov edx, OFFSET outputBuffer
-    INVOKE Str_cat, eax, edx
-
-    ret
-addComma ENDP
 END
