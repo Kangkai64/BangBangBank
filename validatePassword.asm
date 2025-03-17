@@ -28,7 +28,8 @@ validatePassword PROC,
 
     ; EAX now contains pointer to encrypted result
     mov esi, eax                         ; Encrypted input password
-    INVOKE convertHexToString, eax, ADDR validationBuffer, 0  ; Convert binary to string
+    INVOKE Str_length, esi
+    INVOKE convertHexToString, esi, ADDR validationBuffer, eax  ; Convert binary to string
     lea esi, validationBuffer            ; Now use string version for comparison
     mov edi, hashedPassword              ; Stored hashed password
 
@@ -47,6 +48,14 @@ compareLoop:
     mov al, [esi]
     mov dl, [edi]
     
+    ; There's space in the hashed password
+    checkSpace:
+        cmp dl, ' '
+        jne continue
+        inc edi
+        jmp compareLoop
+
+    continue:
     ; Check if we've reached the end of either string
     cmp al, 0
     je checkEndDest

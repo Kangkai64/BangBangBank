@@ -307,6 +307,7 @@ parseCSVField PROC USES eax ecx edx
     fieldEnd:
         ; Skip comma
         inc esi
+        INVOKE Str_trim, edi, " "
         jmp terminateField
         
     endOfLine:

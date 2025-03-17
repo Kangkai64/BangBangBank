@@ -103,6 +103,7 @@ sameDay:
     
 notLocked:
     ; Validate password
+    INVOKE printUserCredentials, ADDR user
     INVOKE validatePassword, ADDR inputPassword, ADDR user.hashed_password, ADDR user.encryption_key
     jnc loginSuccess
     
