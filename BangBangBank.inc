@@ -138,6 +138,10 @@ setTxtColor PROTO,
 
 login PROTO
 
+aboutUs PROTO
+
+displayCustomerMenu PROTO
+
 promptForUsername PROTO,
     inputUsernameAddress: PTR BYTE
 

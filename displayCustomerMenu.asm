@@ -15,19 +15,25 @@ defaultColor BYTE ?
 currentTime SYSTEMTIME <>
 timeOutputBuffer BYTE 32 DUP(?)
 timeDate BYTE 16 DUP(?)
-mainMenuDesign BYTE NEWLINE, NEWLINE, "Welcome to Bang Bang Bank", NEWLINE, NEWLINE, 
+welcomeMessage BYTE NEWLINE, NEWLINE, "Welcome ", 0
+customerMenuTitle BYTE NEWLINE,
 					"==============================", NEWLINE, 
-					"Main Menu", NEWLINE, 
-					"==============================", NEWLINE,
-					"1. Login", NEWLINE,
-					"2. About Us", NEWLINE,
-					"9. Exit", NEWLINE, 0
+					"Customer Menu", NEWLINE, 
+					"==============================", NEWLINE, 
+					"Account No.: ", NEWLINE, 0
+customerMenuChoice BYTE NEWLINE,
+					"1. Transfer", NEWLINE,
+					"2. Deposit", NEWLINE,
+					"3. Monthly Statement", NEWLINE,
+					"4. Change Credentials", NEWLINE,
+					"5. Switch Account", NEWLINE,
+					"9. Logut", NEWLINE, NEWLINE, 0
 
 username BYTE 255 DUP("?")
 password BYTE 255 DUP("?")
 
 .code
-displayMainMenu PROC
+displayCustomerMenu PROC
 	call Clrscr
 	; Get console default text color
 	call GetTextColor
@@ -57,18 +63,16 @@ displayMainMenu PROC
 	INVOKE setTxtColor, colorCode
 	INVOKE printString, ADDR timeDate
 	INVOKE setTxtColor, defaultColor
-	INVOKE printString, ADDR mainMenuDesign
-	INVOKE promptForIntChoice, 1, 2
+	INVOKE printString, ADDR welcomeMessage
+	INVOKE printString, ADDR customerMenuTitle
+	INVOKE printString, ADDR customerMenuChoice
+	INVOKE promptForIntChoice, 1, 5
 	
 	.IF CARRY? ; Return if the input is invalid
 		jmp done
-	.ELSEIF al == 1
-		call login
-	.ELSEIF al == 2
-		call aboutUs
 	.ENDIF
 
 	done:
-		ret
-displayMainMenu ENDP
+		ret 
+displayCustomerMenu ENDP
 END

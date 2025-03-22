@@ -172,7 +172,9 @@ loginSuccess:
     INVOKE printString, ADDR loginSuccessMsg
 
     CLC  ; Return login succeeded
-    
+    call Wait_Msg
+    call displayCustomerMenu
+   
 loginExit:
     INVOKE clearUserCredential, ADDR user
     ret
