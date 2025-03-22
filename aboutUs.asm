@@ -66,7 +66,8 @@ aboutUs PROC
 
 	; Exit about us
 	call Wait_Msg
-	jmp displayMainMenu
+	STC
 	
+	ret
 aboutUs ENDP
 END 

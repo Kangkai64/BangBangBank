@@ -1,0 +1,4 @@
+transaction_id,customer_id,transaction_type,amount,date,time
+T0001,C001,Deposit,500.00,10/03/2025,09:15:30
+T0002,C002,Transfer,200.00,10/03/2025,10:20:45
+T0003,C003,Transfer,1500.00,10/03/2025,11:25:50 

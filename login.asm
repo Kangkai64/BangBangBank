@@ -173,7 +173,14 @@ loginSuccess:
 
     CLC  ; Return login succeeded
     call Wait_Msg
-    call displayCustomerMenu
+
+    ; Display customer menu
+    customerMenu:
+        call displayCustomerMenu
+        .IF CARRY?
+            call Clrscr
+        .ENDIF
+        jc customerMenu
    
 loginExit:
     INVOKE clearUserCredential, ADDR user
