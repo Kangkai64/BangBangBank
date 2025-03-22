@@ -130,9 +130,6 @@ displayMainMenu PROTO
 promptForIntChoice PROTO,
     lowerBound: BYTE,
     upperBound: BYTE
-	
-getDateTimeComponent PROTO,
-	timeOption: BYTE
 
 Wait_Msg PROTO
 
@@ -168,24 +165,7 @@ updateUserFile PROTO,
 resetLoginAttempt PROTO,
     user: PTR userCredential
 
-readAccountFile PROTO,
-    customerID: PTR BYTE,
-    accountArray: PTR customerAccount,
-    maxAccounts: DWORD
-
-readTransactionFile PROTO,
-    customerID: PTR BYTE,
-    transactionArray: PTR customerTransaction,
-    maxTransactions: DWORD
-
-generateOTP PROTO,
-    customerID: PTR BYTE
-
 printUserCredentials PROTO, 
     user: PTR userCredential
-
-switchAccount PROTO,
-    user: PTR userCredential,
-    customerID: PTR BYTE
 
 .LIST

@@ -2,9 +2,10 @@
 INCLUDE BangBangBank.inc
 
 .code
-;--------------------------------------------------------------------------
-; Helper function to format system time into a string (DD/MM/YYYY HH:MM:SS)
-;--------------------------------------------------------------------------
+;--------------------------------------------------------
+; Helper function to format system time into a timestamp 
+; string (DD/MM/YYYY HH:MM:SS)
+;--------------------------------------------------------
 formatSystemTime PROC,
     systemTimePtr:PTR SYSTEMTIME,
     outputBuffer:PTR BYTE
@@ -451,7 +452,6 @@ parseCSVField ENDP
 ; Notes:
 ;   - Destination buffer must be at least (byteCount*2)+1 bytes to accommodate the string and null terminator
 ;   - Each byte becomes two hex characters in the output string
-; Example: [0x1A, 0xF3] becomes "1AF3"
 ;-------------------------------------------------------------------------------------
 .data
 hexChars BYTE "0123456789ABCDEF",0

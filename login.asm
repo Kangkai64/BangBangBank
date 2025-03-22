@@ -24,7 +24,6 @@ inputUsername BYTE 255 DUP(?)
 inputPassword BYTE 255 DUP(?)
 currentTime SYSTEMTIME <>
 user userCredential <>
-unlockHour BYTE 16 DUP(?)
 
 .code
 login PROC
@@ -62,8 +61,8 @@ login PROC
     lea esi, user.firstLoginAttemptTimestamp
 
     ; Skip to hour part (format is DD/MM/YYYY HH:MM:SS)
-    ; Start at position 12 which is the first digit of the hour
-    add esi, 12
+    ; Start at position 11 which is the first digit of the hour
+    add esi, 11
 
     ; Extract hour as text and convert to integer
     mov al, [esi]      ; First digit of hour
@@ -89,20 +88,14 @@ login PROC
     add al, '0'         ; Convert back to ASCII
     add ah, '0'         ; Convert back to ASCII
 
-    ; Store formatted hours
-    mov byte ptr [OFFSET unlockHour], al     ; Tens digit
-    mov byte ptr [OFFSET unlockHour+1], ah   ; Ones digit
-    mov byte ptr [OFFSET unlockHour+2], ':'  ; Add colon for HH:MM format
+    ; Move back the updated time into ESI
+    mov [esi], al
+    mov [esi+1], ah 
 
-    ; Copy minutes from original timestamp
-    mov al, [esi+3]     ; First minute digit
-    mov byte ptr [OFFSET unlockHour+3], al
-    mov al, [esi+4]     ; Second minute digit
-    mov byte ptr [OFFSET unlockHour+4], al
-    mov byte ptr [OFFSET unlockHour+5], 0    ; Null terminator
+    sub esi, 11 ; Point to the start of timestamp
 
     ; Display the unlock time
-    INVOKE printString, ADDR unlockHour
+    INVOKE printString, esi
     
     ; Login failed due to lockout
     call Wait_Msg

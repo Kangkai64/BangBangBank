@@ -46,7 +46,7 @@ validateLoginTime PROC,
     lea esi, (userCredential PTR [edi]).firstLoginAttemptTimestamp
     
     ; Parse timestamp - skip over DD/MM/YYYY and space to get to HH
-    add esi, 12
+    add esi, 11
     
     ; Now ESI points to the HH part
     xor eax, eax

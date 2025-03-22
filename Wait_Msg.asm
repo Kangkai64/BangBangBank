@@ -15,6 +15,7 @@ INCLUDE BangBangBank.inc
 Wait_Msg PROC
 
 	call Crlf
+	call Crlf
 	call WaitMsg
 	call Crlf
 	call Crlf

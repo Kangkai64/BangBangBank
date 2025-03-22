@@ -24,7 +24,6 @@
     <MASM Include="helper.asm" />
     <MASM Include="printUserCredentials.asm" />
     <MASM Include="promptForPassword.asm" />
-    <MASM Include="getDateTimeComponent.asm" />
     <MASM Include="login.asm" />
     <MASM Include="Main.asm">
       <AssembledCodeListingFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)$(ProjectName).lst</AssembledCodeListingFile>
