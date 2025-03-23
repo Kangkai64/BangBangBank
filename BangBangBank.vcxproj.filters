@@ -21,6 +21,7 @@
     <MASM Include="displayCustomerMenu.asm" />
     <MASM Include="printUserAccount.asm" />
     <MASM Include="inputFromAccount.asm" />
+    <MASM Include="printMonthlyStatement.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />

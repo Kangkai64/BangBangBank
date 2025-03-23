@@ -182,4 +182,6 @@ printUserCredentials PROTO,
 printUserAccount PROTO, 
     account: PTR userAccount
 
+printMonthlyStatement PROTO
+
 .LIST

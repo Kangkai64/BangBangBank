@@ -85,6 +85,17 @@ displayCustomerMenu PROC,
 	
 	.IF CARRY? ; Return if the input is invalid
 		jmp done
+	.ELSEIF al == 1
+		;call login
+	.ELSEIF al == 2
+		;call aboutUs
+	.ELSEIF al == 3
+		call printMonthlyStatement 
+		;trying invoke printMonthlyStatement, ADDR account, but failed
+	.ELSEIF al == 4
+		;call aboutUs
+	.ELSEIF al == 5
+		;call login
 	.ENDIF
 
 	done:

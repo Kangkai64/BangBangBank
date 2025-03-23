@@ -25,6 +25,7 @@
     <MASM Include="encrypt.asm" />
     <MASM Include="helper.asm" />
     <MASM Include="inputFromAccount.asm" />
+    <MASM Include="printMonthlyStatement.asm" />
     <MASM Include="printUserAccount.asm" />
     <MASM Include="printUserCredentials.asm" />
     <MASM Include="promptForPassword.asm" />
