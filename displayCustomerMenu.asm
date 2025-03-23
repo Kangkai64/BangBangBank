@@ -70,6 +70,16 @@ displayCustomerMenu PROC
 	
 	.IF CARRY? ; Return if the input is invalid
 		jmp done
+	.ELSEIF al == 1
+		;call processtransfer
+	.ELSEIF al == 2
+		;call processdeposit
+	.ELSEIF al == 3
+		call printMonthlyStatement
+	.ELSEIF al == 4
+		;call changeCredentials
+	.ELSEIF al == 5
+		;call switchAccount
 	.ENDIF
 
 	done:

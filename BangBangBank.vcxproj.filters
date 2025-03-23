@@ -20,6 +20,7 @@
     <MASM Include="printUserCredentials.asm" />
     <MASM Include="aboutUs.asm" />
     <MASM Include="displayCustomerMenu.asm" />
+    <MASM Include="printMonthlyStatement.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />

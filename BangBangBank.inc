@@ -172,4 +172,6 @@ resetLoginAttempt PROTO,
 printUserCredentials PROTO, 
     user: PTR userCredential
 
+printMonthlyStatement PROTO
+
 .LIST

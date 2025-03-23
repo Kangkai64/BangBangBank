@@ -24,6 +24,7 @@
     <MASM Include="displayMainMenu.asm" />
     <MASM Include="encrypt.asm" />
     <MASM Include="helper.asm" />
+    <MASM Include="printMonthlyStatement.asm" />
     <MASM Include="printUserCredentials.asm" />
     <MASM Include="promptForPassword.asm" />
     <MASM Include="login.asm" />
