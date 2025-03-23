@@ -1,12 +1,12 @@
 
 INCLUDE BangBangBank.inc
 
-;------------------------------------------------------
-; This module will print the main menu onto the console
+;-----------------------------------------------------------
+; This module will print the customer menu onto the console
 ; Receives : Nothing
 ; Returns : Nothing
 ; Last update: 13/3/2025
-;------------------------------------------------------
+;-----------------------------------------------------------
 
 .data
 dateHeader BYTE "Today is ", 0
@@ -19,21 +19,21 @@ welcomeMessage BYTE NEWLINE, NEWLINE, "Welcome ", 0
 customerMenuTitle BYTE NEWLINE,
 					"==============================", NEWLINE, 
 					"Customer Menu", NEWLINE, 
-					"==============================", NEWLINE, 
-					"Account No.: ", NEWLINE, 0
+					"==============================", NEWLINE, 0
 customerMenuChoice BYTE NEWLINE,
 					"1. Transfer", NEWLINE,
 					"2. Deposit", NEWLINE,
 					"3. Monthly Statement", NEWLINE,
 					"4. Change Credentials", NEWLINE,
 					"5. Switch Account", NEWLINE,
-					"9. Logut", NEWLINE, NEWLINE, 0
+					"9. Logout", NEWLINE, NEWLINE, 0
 
-username BYTE 255 DUP("?")
-password BYTE 255 DUP("?")
+account userAccount <>
 
 .code
-displayCustomerMenu PROC
+displayCustomerMenu PROC,
+	user: PTR userCredential
+
 	call Clrscr
 	; Get console default text color
 	call GetTextColor
@@ -58,12 +58,27 @@ displayCustomerMenu PROC
 	; Add null terminator
 	mov BYTE PTR [edi], 0
 
+	; Copy out the customer_id and store it into user account structure
+    mov esi, [user]
+    add esi, OFFSET userCredential.customer_id
+    INVOKE Str_copy, esi, ADDR account.customer_id
+	mov esi, [user]
+	add esi, OFFSET userCredential.username
+
+	; Read user account from userAccount.txt
+	INVOKE inputFromAccount, ADDR account
+
 	; Display the main menu
 	INVOKE printString, ADDR dateHeader
 	INVOKE setTxtColor, colorCode
 	INVOKE printString, ADDR timeDate
 	INVOKE setTxtColor, defaultColor
 	INVOKE printString, ADDR welcomeMessage
+	INVOKE printString, esi
+	Call Crlf
+	Call Crlf
+	INVOKE printUserAccount, ADDR account
+	Call Crlf
 	INVOKE printString, ADDR customerMenuTitle
 	INVOKE printString, ADDR customerMenuChoice
 	INVOKE promptForIntChoice, 1, 5

@@ -15,11 +15,12 @@
     <MASM Include="promptForPassword.asm" />
     <MASM Include="updateUserFile.asm" />
     <MASM Include="validateLoginTime.asm" />
-    <MASM Include="readAccountFile.asm" />
     <MASM Include="helper.asm" />
     <MASM Include="printUserCredentials.asm" />
     <MASM Include="aboutUs.asm" />
     <MASM Include="displayCustomerMenu.asm" />
+    <MASM Include="printUserAccount.asm" />
+    <MASM Include="inputFromAccount.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />

@@ -1,4 +1,4 @@
 account_number,customer_id,full_name,phone_number,email,account_balance,opening_date,transaction_limit,branch_name,branch_address,account_type,currency,beneficiaries
-123456781234,C001,John Doe,555-1234,jdoe@example.com,1500.75,15/01/2025,5000.00,Main Branch,123 Main St,Savings,RM,[Alice Doe, Ben Joestar]
+123456781234,C001,John Doe,012-345 6789,jdoe@example.com,1500.75,15/01/2025,5000.00,Main Branch,123 Main St,Savings,RM,[Alice Doe.Ben Joestar]
 234567891234,C002,Alice Smith,555-5678,asmith@example.com,2500.00,20/02/2025,3000.00,East Branch,456 East Rd,Checking,USD,[Bob White]
 765498764321,C003,Bob White,555-8765,bwhite@example.com,3200.50,05/03/2025,7000.00,West Branch,789 West Ave,Savings,SGD,[Alice Smith]
