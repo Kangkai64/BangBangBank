@@ -2,44 +2,42 @@
 INCLUDE BangBangBank.inc
 
 ;--------------------------------------------------------------------------------
-; This module will read user credentials from a single file containing all users
-; Receives: Pointer to userCredential structure (user)
-; Returns: EAX = 0 if the user is not found
-; Last update: 16/3/2025
+; This procedure reads user account data from a single file by customer ID
+; Receives: Pointer to userAccount structure (account) with customer_id filled
+; Returns: EAX = 0 if the user account is not found
+; Last update: 23/3/2025
 ;--------------------------------------------------------------------------------
-
 .data
-; File name components
-directoryPath       BYTE "Users\", 0
-credentialFileName  BYTE "Users\userCredential.txt", 0
-transactionFileName BYTE "Users\transactionLog.txt", 0
+accountFileName     BYTE "Users\userAccount.txt", 0
 
 ; Handles and buffers
 fileHandle         DWORD ?
 readBuffer         BYTE 20480 DUP(?)  ; Larger buffer for multi-user file
 errorMsg           BYTE "Error: File cannot be opened or read", NEWLINE, 0
 pathErrorMsg       BYTE "Error: Invalid file path", NEWLINE, 0
+userNotFoundMsg    BYTE NEWLINE, "User not found.", NEWLINE, 0
 bytesRead          DWORD ?
 tempBuffer         BYTE 512 DUP(?)
 fieldBuffer        BYTE 512 DUP(?)
+fieldIndex         DWORD 0
 currentLineStart   DWORD 0
-foundUser          BYTE 0
-inputUsername      BYTE 64 DUP(?)
+foundAccount       BYTE 0
+userCustomerID BYTE 32 DUP(?)
 
 .code
-inputFromFile PROC,
-    user: PTR userCredential
+inputFromAccount PROC,
+    account: PTR userAccount
     
     pushad
 
     ; Copy out the username and store it into inputUsername
-    mov esi, [user]
-    add esi, OFFSET userCredential.username
-    INVOKE Str_copy, esi, ADDR inputUsername
+    mov esi, [account]
+    add esi, OFFSET userAccount.customer_id
+    INVOKE Str_copy, esi, ADDR userCustomerID
 
-    ; Open the credentials file
+    ; Open the account file
     INVOKE CreateFile, 
-        ADDR credentialFileName,         ; lpFileName
+        ADDR accountFileName,            ; lpFileName
         GENERIC_READ,                    ; dwDesiredAccess
         FILE_SHARE_READ,                 ; dwShareMode
         NULL,                            ; lpSecurityAttributes
@@ -54,25 +52,13 @@ inputFromFile PROC,
     jne fileOpenSuccess
     
     ; File open error
-    INVOKE printString, ADDR credentialFileName
+    INVOKE printString, ADDR accountFileName
     call Crlf
     INVOKE printString, ADDR errorMsg
 
-    ; Try to create directory
-    INVOKE CreateDirectory, ADDR directoryPath, NULL
-    test eax, eax    ; Check if directory creation was successful
-    jnz directoryCreated
-
-    ; Directory creation failed
-    call Crlf
-    INVOKE printString, ADDR pathErrorMsg
-    INVOKE printString, ADDR directoryPath
-    call Crlf
-
-directoryCreated:
     call Wait_Msg
-    STC ; Set carry flag
-    jmp inputFileExit
+    mov foundAccount, 0  ; Set not found flag
+    jmp readAccountFileExit
     
 fileOpenSuccess:
     ; Read file content into buffer
@@ -87,8 +73,8 @@ fileOpenSuccess:
     .IF eax == 0
         INVOKE printString, ADDR errorMsg
         call Wait_Msg
-        STC ; Set carry flag
-        jmp inputFileExit
+        mov foundAccount, 0  ; Set not found flag
+        jmp readAccountFileExit
     .ENDIF
     
     ; Add null terminator to buffer
@@ -102,7 +88,7 @@ fileOpenSuccess:
 skipHeaderLoop:
     mov al, [esi]
     cmp al, 0          ; End of buffer?
-    je userNotFound    ; File is empty or only has header
+    je accountNotFound ; File is empty or only has header
     cmp al, 10         ; LF - new line?
     je foundDataStart
     cmp al, 13         ; CR?
@@ -118,39 +104,43 @@ skipCR:
     
 foundDataStart:
     
-    ; Set foundUser flag to 0 (not found)
-    mov foundUser, 0
+    ; Set foundAccount flag to 0 (not found)
+    mov foundAccount, 0
     
-searchUserLoop:
+searchAccountLoop:
     ; Store the start of current line
     mov currentLineStart, esi
     
-    ; Parse username field from current line
+    ; Skip account_number field (first field)
+    mov edi, OFFSET tempBuffer
+    call ParseCSVField
+    
+    ; Parse customer_id field from current line (second field)
     mov edi, OFFSET tempBuffer
     call ParseCSVField
 
-    ; Compare with input username
-    INVOKE Str_compare, ADDR tempBuffer, ADDR inputUsername
+    ; Compare with input customer_id
+    INVOKE Str_compare, ADDR tempBuffer, ADDR userCustomerID
     
     ; If match found, process this record
     .IF ZERO?
-        ; Found the user! Set flag
-        mov foundUser, 1
+        ; Found the account! Set flag
+        mov foundAccount, 1
         
         ; Return to the start of this line
         mov esi, currentLineStart
         
-        ; Parse all fields for this user
-        INVOKE parseUserCredentials, user
+        ; Parse all fields for this account
+        INVOKE parseUserAccount, account
         
-        jmp inputFileExit
+        jmp readAccountFileExit
     .ENDIF
     
-    ; Username didn't match, skip to next line
+    ; CustomerID didn't match, skip to next line
 skipToNextLine:
     mov al, [esi]
     cmp al, 0      ; End of file?
-    je userNotFound
+    je accountNotFound
     cmp al, 10     ; LF?
     je nextLine
     cmp al, 13     ; CR?
@@ -163,83 +153,125 @@ skipToNextCR:
     cmp BYTE PTR [esi], 10  ; Check for LF
     jne skipToNextLine
     inc esi        ; Skip LF
-    jmp searchUserLoop
+    jmp searchAccountLoop
     
 nextLine:
     inc esi        ; Skip LF
-    jmp searchUserLoop
+    jmp searchAccountLoop
     
-userNotFound:
+accountNotFound:
     mov eax, FALSE
     mov [esp+28], eax
     
-inputFileExit:
+readAccountFileExit:
     INVOKE CloseHandle, fileHandle
     popad
     ret
-inputFromFile ENDP
+inputFromAccount ENDP
 
 ;--------------------------------------------------------------------------------
-; parseUserCredentials PROC
-; Parses all credential fields for the current user and fills the structure
-; Receives: ESI = pointer to start of user record in buffer
-;           user = pointer to userCredential structure
-; Returns: Filled user credential structure
+; parseUserAccount PROC
+; Parses all account fields for the current user and fills the structure
+; Receives: ESI = pointer to start of account record in buffer
+;           account = pointer to userAccount structure
+; Returns: Filled user account structure
 ;--------------------------------------------------------------------------------
-parseUserCredentials PROC,
-    user: PTR userCredential
+parseUserAccount PROC,
+    account: PTR userAccount
     
-parseNextCredField:
-    ; Parse username field
+parseNextAccountField:
+    ; Parse account_number field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
-    mov edi, user
-    add edi, OFFSET userCredential.username
-    INVOKE Str_copy, ADDR fieldBuffer, edi
-    
-    ; Parse hashed_password field
-    mov edi, OFFSET fieldBuffer
-    call ParseCSVField
-    mov edi, user
-    add edi, OFFSET userCredential.hashed_password
-    INVOKE Str_copy, ADDR fieldBuffer, edi
-    
-    ; Parse hashed_pin field
-    mov edi, OFFSET fieldBuffer
-    call ParseCSVField
-    mov edi, user
-    add edi, OFFSET userCredential.hashed_pin
+    mov edi, account
+    add edi, OFFSET userAccount.account_number
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
     ; Parse customer_id field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
-    mov edi, user
-    add edi, OFFSET userCredential.customer_id
+    mov edi, account
+    add edi, OFFSET userAccount.customer_id
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
-    ; Parse encryption_key field
+    ; Parse full_name field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
-    mov edi, user
-    add edi, OFFSET userCredential.encryption_key
+    mov edi, account
+    add edi, OFFSET userAccount.full_name
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
-    ; Parse loginAttempt field
+    ; Parse phone_number field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
-    mov edi, user
-    add edi, OFFSET userCredential.loginAttempt
+    mov edi, account
+    add edi, OFFSET userAccount.phone_number
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
-    ; Parse firstLoginAttemptTimestamp field
+    ; Parse email field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
-    mov edi, user
-    add edi, OFFSET userCredential.firstLoginAttemptTimestamp
+    mov edi, account
+    add edi, OFFSET userAccount.email
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse account_balance field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.account_balance
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse opening_date field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.opening_date
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse transaction_limit field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.transaction_limit
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse branch_name field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.branch_name
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse branch_address field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.branch_address
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse account_type field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.account_type
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse currency field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.currency
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse beneficiaries field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.beneficiaries
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
 doneParsingFields:
     ret
-parseUserCredentials ENDP
+parseUserAccount ENDP
 END

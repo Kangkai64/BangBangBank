@@ -31,7 +31,7 @@ userCredential ENDS
 ;----------------------------
 ; Customer Account Structure
 ;----------------------------
-customerAccount STRUCT
+userAccount STRUCT
     account_number    BYTE 32 DUP(?)
     customer_id       BYTE 32 DUP(?)
     full_name         BYTE 64 DUP(?)
@@ -45,19 +45,19 @@ customerAccount STRUCT
     account_type      BYTE 32 DUP(?)
     currency          BYTE 16 DUP(?)
     beneficiaries     BYTE 255 DUP(?)
-customerAccount ENDS
+userAccount ENDS
 
 ;----------------------------
 ; Transaction Structure
 ;----------------------------
-customerTransaction STRUCT
+userTransaction STRUCT
     transaction_id    BYTE 32 DUP(?)
     customer_id       BYTE 32 DUP(?)
     transaction_type  BYTE 32 DUP(?)
     amount            BYTE 32 DUP(?)
     date              BYTE 32 DUP(?)
     time              BYTE 32 DUP(?)
-customerTransaction ENDS
+userTransaction ENDS
 
 ;-------------------------------------------
 ; File Function Prototype from kernel32.inc
@@ -106,6 +106,9 @@ parseCSVField PROTO
 parseUserCredentials PROTO,
     user: PTR userCredential
 
+parseUserAccount PROTO,
+    account: PTR userAccount
+
 convertHexToString PROTO,
     source: PTR BYTE,
     destination: PTR BYTE,
@@ -140,7 +143,8 @@ login PROTO
 
 aboutUs PROTO
 
-displayCustomerMenu PROTO
+displayCustomerMenu PROTO,
+	user: PTR userCredential
 
 promptForUsername PROTO,
     inputUsernameAddress: PTR BYTE
@@ -154,6 +158,9 @@ encrypt PROTO,
 
 inputFromFile PROTO,
     user: PTR userCredential
+
+inputFromAccount PROTO,
+    account: PTR userAccount
 
 validateLoginTime PROTO,
     user: PTR userCredential
@@ -171,5 +178,8 @@ resetLoginAttempt PROTO,
 
 printUserCredentials PROTO, 
     user: PTR userCredential
+
+printUserAccount PROTO, 
+    account: PTR userAccount
 
 .LIST

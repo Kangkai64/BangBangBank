@@ -42,6 +42,7 @@ login PROC
     INVOKE inputFromFile, ADDR user
 
     .IF eax == 0
+        INVOKE printString, ADDR loginFailMsg
         STC ; Return login failure
         jmp loginExit
     .ENDIF
@@ -176,7 +177,7 @@ loginSuccess:
 
     ; Display customer menu
     customerMenu:
-        call displayCustomerMenu
+        INVOKE displayCustomerMenu, ADDR user
         .IF CARRY?
             call Clrscr
         .ENDIF
