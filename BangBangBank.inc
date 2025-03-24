@@ -180,7 +180,7 @@ printUserCredentials PROTO,
     user: PTR userCredential
 
 printUserAccount PROTO, 
-    account: PTR userAccount
+    account: PTR userAccount, printMode: DWORD
 
 printMonthlyStatement PROTO
 

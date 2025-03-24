@@ -74,12 +74,10 @@ displayCustomerMenu PROC,
 	INVOKE printString, ADDR timeDate
 	INVOKE setTxtColor, defaultColor
 	INVOKE printString, ADDR welcomeMessage
-	INVOKE printString, esi
-	Call Crlf
-	Call Crlf
-	INVOKE printUserAccount, ADDR account
-	Call Crlf
+	INVOKE printUserAccount, ADDR account, 2
 	INVOKE printString, ADDR customerMenuTitle
+	INVOKE printUserAccount, ADDR account, 1
+	Call Crlf
 	INVOKE printString, ADDR customerMenuChoice
 	INVOKE promptForIntChoice, 1, 5
 	
