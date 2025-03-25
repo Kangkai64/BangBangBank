@@ -5,16 +5,6 @@ INCLUDE Irvine32.inc
 NEWLINE TEXTEQU <0dh, 0ah>
 maxBufferSize = 255
 
-;-------------------------
-; Date and Time Symbols
-;-------------------------
-YEAR = 1
-MONTH = 2
-DAY = 3 
-WEEKDAY = 4
-DATE = 5
-TIME = 6
-
 ;----------------------------
 ; User Credential Structure
 ;----------------------------
@@ -181,6 +171,16 @@ printUserCredentials PROTO,
 
 printUserAccount PROTO, 
     account: PTR userAccount, printMode: DWORD
+
+;-------------------------
+; pritnMode values
+;-------------------------
+PRINTMODE_ALL               EQU 0
+PRINTMODE_ACCOUNT_NUMBER    EQU 1
+PRINTMODE_FULLNAME          EQU 2
+PRINTMODE_BALANCE           EQU 3
+
+switchAccount PROTO
 
 printMonthlyStatement PROTO
 

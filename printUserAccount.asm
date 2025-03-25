@@ -5,7 +5,7 @@ INCLUDE BangBangBank.inc
 ; This module will print all user account information onto the console
 ; Receives : The address / pointer of the user account structure
 ; Returns : Nothing
-; Last update: 23/3/2025
+; Last update: 25/3/2025
 ;----------------------------------------------------------------------
 .data
 ; Labels for each field
@@ -30,11 +30,14 @@ printUserAccount PROC,
 
     pushad
 
-    cmp printMode, 1
+    cmp printMode, PRINTMODE_ACCOUNT_NUMBER
     je print_account_number
 
-    cmp printMode, 2
+    cmp printMode, PRINTMODE_FULLNAME
     je print_full_name
+
+    cmp printMode, PRINTMODE_BALANCE
+    je print_balance
 
     jmp print_all
 
@@ -55,6 +58,16 @@ print_full_name:
     add esi, OFFSET userAccount.full_name
     INVOKE printString, esi
 
+    jmp done
+
+print_balance:
+
+    ; Print account balance
+    INVOKE printString, ADDR accountBalanceLabel
+    mov esi, account
+    add esi, OFFSET userAccount.account_balance
+    INVOKE printString, esi
+    
     jmp done
     
 print_all: 

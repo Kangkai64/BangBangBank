@@ -35,6 +35,7 @@
     </MASM>
     <MASM Include="printString.asm" />
     <MASM Include="promptForIntChoice.asm" />
+    <MASM Include="switchAccount.asm" />
     <MASM Include="updateUserFile.asm" />
     <MASM Include="validateLoginTime.asm" />
     <MASM Include="Wait_Msg.asm" />
