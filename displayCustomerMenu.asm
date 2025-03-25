@@ -5,7 +5,7 @@ INCLUDE BangBangBank.inc
 ; This module will print the customer menu onto the console
 ; Receives : Nothing
 ; Returns : Nothing
-; Last update: 13/3/2025
+; Last update: 25/3/2025
 ;-----------------------------------------------------------
 
 .data
@@ -74,12 +74,12 @@ displayCustomerMenu PROC,
 	INVOKE printString, ADDR timeDate
 	INVOKE setTxtColor, defaultColor
 	INVOKE printString, ADDR welcomeMessage
-	INVOKE printString, esi
-	Call Crlf
-	Call Crlf
-	INVOKE printUserAccount, ADDR account
-	Call Crlf
+	INVOKE printUserAccount, ADDR account, PRINTMODE_FULLNAME
 	INVOKE printString, ADDR customerMenuTitle
+	INVOKE printUserAccount, ADDR account, PRINTMODE_ACCOUNT_NUMBER
+	Call Crlf
+	INVOKE printUserAccount, ADDR account, PRINTMODE_BALANCE
+	Call Crlf
 	INVOKE printString, ADDR customerMenuChoice
 	INVOKE promptForIntChoice, 1, 5
 	
@@ -94,7 +94,7 @@ displayCustomerMenu PROC,
 	.ELSEIF al == 4
 		;call aboutUs
 	.ELSEIF al == 5
-		;call login
+		;call switchAccount
 	.ENDIF
 
 	done:

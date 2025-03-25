@@ -5,7 +5,7 @@ INCLUDE BangBangBank.inc
 ; This module will print all user account information onto the console
 ; Receives : The address / pointer of the user account structure
 ; Returns : Nothing
-; Last update: 23/3/2025
+; Last update: 25/3/2025
 ;----------------------------------------------------------------------
 .data
 ; Labels for each field
@@ -25,17 +25,60 @@ beneficiariesLabel    BYTE "Beneficiaries: ", 0
 
 .code
 printUserAccount PROC, 
-    account: PTR userAccount
-    
+    account: PTR userAccount,
+    printMode: DWORD ; Decide print what info
+
     pushad
+
+    cmp printMode, PRINTMODE_ACCOUNT_NUMBER
+    je print_account_number
+
+    cmp printMode, PRINTMODE_FULLNAME
+    je print_full_name
+
+    cmp printMode, PRINTMODE_BALANCE
+    je print_balance
+
+    jmp print_all
+
+print_account_number:
+
+    ; Print account number
+    INVOKE printString, ADDR accountNumberLabel
+    mov esi, account
+    add esi, OFFSET userAccount.account_number
+    INVOKE printString, esi
+
+    jmp done
+
+print_full_name: 
     
+    ; Print full name
+    mov esi, account
+    add esi, OFFSET userAccount.full_name
+    INVOKE printString, esi
+
+    jmp done
+
+print_balance:
+
+    ; Print account balance
+    INVOKE printString, ADDR accountBalanceLabel
+    mov esi, account
+    add esi, OFFSET userAccount.account_balance
+    INVOKE printString, esi
+    
+    jmp done
+    
+print_all: 
+
     ; Print account number
     INVOKE printString, ADDR accountNumberLabel
     mov esi, account
     add esi, OFFSET userAccount.account_number
     INVOKE printString, esi
     call Crlf
-    
+
     ; Print customer ID
     INVOKE printString, ADDR customerIdLabel
     mov esi, account
@@ -119,7 +162,8 @@ printUserAccount PROC,
     add esi, OFFSET userAccount.beneficiaries
     INVOKE printString, esi
     call Crlf
-    
+
+done:    
     popad
     ret
 printUserAccount ENDP

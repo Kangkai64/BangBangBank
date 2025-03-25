@@ -5,7 +5,7 @@ INCLUDE BangBangBank.inc
 ; This procedure reads user account data from a single file by customer ID
 ; Receives: Pointer to userAccount structure (account) with customer_id filled
 ; Returns: EAX = 0 if the user account is not found
-; Last update: 23/3/2025
+; Last update: 25/3/2025
 ;--------------------------------------------------------------------------------
 .data
 accountFileName     BYTE "Users\userAccount.txt", 0
@@ -22,7 +22,8 @@ fieldBuffer        BYTE 512 DUP(?)
 fieldIndex         DWORD 0
 currentLineStart   DWORD 0
 foundAccount       BYTE 0
-userCustomerID BYTE 32 DUP(?)
+userCustomerID     BYTE 32 DUP(?)
+SavingsStr         BYTE "Savings", 0
 
 .code
 inputFromAccount PROC,
@@ -122,19 +123,36 @@ searchAccountLoop:
     ; Compare with input customer_id
     INVOKE Str_compare, ADDR tempBuffer, ADDR userCustomerID
     
-    ; If match found, process this record
+    ; If match found, check account type
     .IF ZERO?
-        ; Found the account! Set flag
-        mov foundAccount, 1
+        ;skip to account type field
+        mov edi, OFFSET tempBuffer
+        call ParseCSVField  ;Skip full_name
+        call ParseCSVField  ;Skip phone_number
+        call ParseCSVField  ;Skip email
+        call ParseCSVField  ;Skip account_balance
+        call ParseCSVField  ;Skip opening_date
+        call ParseCSVField  ;Skip transaction_limit
+        call ParseCSVField  ;Skip branch_name
+        call ParseCSVField  ;Skip branch_address
+        call ParseCSVField  ;Parse account_type
+
+        ;Check if account type is Savings
+        INVOKE Str_compare, ADDR tempBuffer, ADDR SavingsStr
+        .IF ZERO?
+            ; Found the account! Set flag
+            mov foundAccount, 1
         
-        ; Return to the start of this line
-        mov esi, currentLineStart
+            ; Return to the start of this line
+            mov esi, currentLineStart
         
-        ; Parse all fields for this account
-        INVOKE parseUserAccount, account
+            ; Parse all fields for this account
+            INVOKE parseUserAccount, account
         
-        jmp readAccountFileExit
+            jmp readAccountFileExit
+        .ENDIF
     .ENDIF
+    
     
     ; CustomerID didn't match, skip to next line
 skipToNextLine:
@@ -180,6 +198,7 @@ parseUserAccount PROC,
     account: PTR userAccount
     
 parseNextAccountField:
+    
     ; Parse account_number field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField

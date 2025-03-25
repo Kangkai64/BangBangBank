@@ -22,6 +22,7 @@
     <MASM Include="printUserAccount.asm" />
     <MASM Include="inputFromAccount.asm" />
     <MASM Include="printMonthlyStatement.asm" />
+    <MASM Include="switchAccount.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />
