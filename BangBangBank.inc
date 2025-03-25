@@ -99,6 +99,9 @@ parseUserCredentials PROTO,
 parseUserAccount PROTO,
     account: PTR userAccount
 
+parseUserTransaction PROTO,
+    transaction : PTR userTransaction
+
 convertHexToString PROTO,
     source: PTR BYTE,
     destination: PTR BYTE,
@@ -152,6 +155,9 @@ inputFromFile PROTO,
 inputFromAccount PROTO,
     account: PTR userAccount
 
+inputFromTransaction PROTO,
+    transaction: PTR userTransaction
+
 validateLoginTime PROTO,
     user: PTR userCredential
 
@@ -171,6 +177,9 @@ printUserCredentials PROTO,
 
 printUserAccount PROTO, 
     account: PTR userAccount, printMode: DWORD
+
+printUserTransaction PROTO, 
+    transaction: PTR userTransaction
 
 ;-------------------------
 ; pritnMode values

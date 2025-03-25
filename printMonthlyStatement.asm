@@ -22,12 +22,23 @@ tableHeader BYTE NEWLINE,
 					"===========================================================================", NEWLINE, 
 					"|| Date  || Description   || Ref. || Withdrawals || Deposits || Balance ||", NEWLINE, 
 					"===========================================================================", NEWLINE, 0
+transaction userTransaction <>
 
 .code
 printMonthlyStatement PROC,
     account: PTR userAccount
     ; Clear the screen
     call Clrscr
+
+    ; Copy out the customer_id and store it into user account structure
+    mov esi, [account]
+    add esi, OFFSET userAccount.customer_id
+    INVOKE Str_copy, esi, ADDR transaction.customer_id
+	mov esi, [account]
+	add esi, OFFSET userAccount.full_name
+
+	; Read user account from userAccount.txt
+	INVOKE inputFromTransaction, ADDR transaction
 
     ; Get console default text color
     call GetTextColor
@@ -56,16 +67,16 @@ printMonthlyStatement PROC,
     add esi, OFFSET userAccount.account_number
     INVOKE printString, esi
     Call Crlf
-    INVOKE printString, ADDR accountLabel
-    mov esi, [account]
-    add esi, OFFSET userAccount.account_number
-    INVOKE printString, esi
+    INVOKE printString, ADDR statementLabel
+    
     Call Crlf
     
     ; Print table header
     mov edx, OFFSET tableHeader
     call WriteString
     call Crlf
+    ;Print transaction details
+    INVOKE printUserTransaction, ADDR transaction
     
     ; Exit monthly statement
     call ReadChar
