@@ -90,8 +90,7 @@ displayCustomerMenu PROC,
 	.ELSEIF al == 2
 		;call aboutUs
 	.ELSEIF al == 3
-		call printMonthlyStatement 
-		;trying invoke printMonthlyStatement, ADDR account, but failed
+		INVOKE printMonthlyStatement, ADDR account
 	.ELSEIF al == 4
 		;call aboutUs
 	.ELSEIF al == 5

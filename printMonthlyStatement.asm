@@ -16,15 +16,16 @@ timeOutputBuffer BYTE 32 DUP(?)
 timeDate BYTE 16 DUP(?)
 statementHeader BYTE "Monthly Statement", 0
 nameLabel BYTE "Name: ", 0
-accountLabel BYTE "Account No. : ", 0
-periodLabel BYTE "Statement period : ", 0
+accountLabel BYTE "Account No. :", 0
+statementLabel BYTE "Statement period :",0
 tableHeader BYTE NEWLINE,
 					"===========================================================================", NEWLINE, 
 					"|| Date  || Description   || Ref. || Withdrawals || Deposits || Balance ||", NEWLINE, 
 					"===========================================================================", NEWLINE, 0
 
 .code
-printMonthlyStatement PROC
+printMonthlyStatement PROC,
+    account: PTR userAccount
     ; Clear the screen
     call Clrscr
 
@@ -39,23 +40,27 @@ printMonthlyStatement PROC
     call SetTextColor
     call WriteString
     call Crlf
-    
+
     ; Restore default text color
     mov al, defaultColor
     call SetTextColor
-    
-    ; Print customer information
-    mov edx, OFFSET nameLabel
-    call WriteString
-    call Crlf
-    
-    mov edx, OFFSET accountLabel
-    call WriteString
-    call Crlf
-    
-    mov edx, OFFSET periodLabel
-    call WriteString
-    call Crlf
+
+    ; Display User's info
+    INVOKE printString, ADDR nameLabel
+    mov esi, [account]
+    add esi, OFFSET userAccount.full_name
+    INVOKE printString, esi
+    Call Crlf
+    INVOKE printString, ADDR accountLabel
+    mov esi, [account]
+    add esi, OFFSET userAccount.account_number
+    INVOKE printString, esi
+    Call Crlf
+    INVOKE printString, ADDR accountLabel
+    mov esi, [account]
+    add esi, OFFSET userAccount.account_number
+    INVOKE printString, esi
+    Call Crlf
     
     ; Print table header
     mov edx, OFFSET tableHeader
@@ -63,7 +68,6 @@ printMonthlyStatement PROC
     call Crlf
     
     ; Exit monthly statement
-    call WriteString
     call ReadChar
     STC
     

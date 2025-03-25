@@ -30,7 +30,7 @@ inputFromAccount PROC,
     
     pushad
 
-    ; Copy out the username and store it into inputUsername
+    ; Copy out the customer_id and store it into esi
     mov esi, [account]
     add esi, OFFSET userAccount.customer_id
     INVOKE Str_copy, esi, ADDR userCustomerID
