@@ -30,6 +30,7 @@
     <MASM Include="printUserAccount.asm" />
     <MASM Include="printUserCredentials.asm" />
     <MASM Include="printUserTransaction.asm" />
+    <MASM Include="processTransaction.asm" />
     <MASM Include="promptForPassword.asm" />
     <MASM Include="login.asm" />
     <MASM Include="Main.asm">
@@ -37,9 +38,12 @@
     </MASM>
     <MASM Include="printString.asm" />
     <MASM Include="promptForIntChoice.asm" />
+    <MASM Include="promptForRecipientAccNo.asm" />
+    <MASM Include="promptForTransactionAmount.asm" />
     <MASM Include="switchAccount.asm" />
     <MASM Include="updateUserFile.asm" />
     <MASM Include="validateLoginTime.asm" />
+    <MASM Include="validateRecipientAcc.asm" />
     <MASM Include="Wait_Msg.asm" />
     <MASM Include="inputFromFile.asm" />
     <MASM Include="promptForUsername.asm" />

@@ -136,8 +136,18 @@ login PROTO
 
 aboutUs PROTO
 
+processTransaction PROTO,
+    account: PTR userAccount
+
+promptForTransactionAmount PROTO \
+    inputTransactionAmountAddress: PTR BYTE, \
+    account: PTR userAccount
+
+promptForRecipientAccNo PROTO,
+    inputRecipientAccNoAddress: PTR BYTE
+
 displayCustomerMenu PROTO,
-	user: PTR userCredential
+    user: PTR userCredential
 
 promptForUsername PROTO,
     inputUsernameAddress: PTR BYTE
@@ -154,6 +164,9 @@ inputFromFile PROTO,
 
 inputFromAccount PROTO,
     account: PTR userAccount
+
+validateRecipientAcc PROTO,
+    Account: PTR userAccount
 
 inputFromTransaction PROTO,
     transaction: PTR userTransaction
@@ -180,6 +193,7 @@ printUserAccount PROTO,
 
 printUserTransaction PROTO, 
     transaction: PTR userTransaction
+
 
 ;-------------------------
 ; pritnMode values

@@ -86,7 +86,7 @@ displayCustomerMenu PROC,
 	.IF CARRY? ; Return if the input is invalid
 		jmp done
 	.ELSEIF al == 1
-		;call login
+		INVOKE processTransaction, ADDR account
 	.ELSEIF al == 2
 		;call aboutUs
 	.ELSEIF al == 3

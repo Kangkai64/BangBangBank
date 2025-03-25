@@ -23,6 +23,12 @@
     <MASM Include="inputFromAccount.asm" />
     <MASM Include="printMonthlyStatement.asm" />
     <MASM Include="switchAccount.asm" />
+    <MASM Include="inputFromTransaction.asm" />
+    <MASM Include="printUserTransaction.asm" />
+    <MASM Include="processTransaction.asm" />
+    <MASM Include="promptForRecipientAccNo.asm" />
+    <MASM Include="promptForTransactionAmount.asm" />
+    <MASM Include="validateRecipientAcc.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />
