@@ -92,7 +92,7 @@ displayCustomerMenu PROC,
 	.ELSEIF al == 3
 		INVOKE printMonthlyStatement, ADDR account
 	.ELSEIF al == 4
-		;call aboutUs
+		call changeCredentials
 	.ELSEIF al == 5
 		;call switchAccount
 	.ENDIF

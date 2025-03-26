@@ -153,7 +153,8 @@ promptForUsername PROTO,
     inputUsernameAddress: PTR BYTE
 
 promptForPassword PROTO,
-    inputPasswordAddress: PTR BYTE
+    inputPasswordAddress: PTR BYTE, 
+    promptMessageAddress: PTR BYTE
 
 encrypt PROTO, 
 	dataArray: PTR BYTE,
@@ -204,6 +205,8 @@ PRINTMODE_FULLNAME          EQU 2
 PRINTMODE_BALANCE           EQU 3
 
 switchAccount PROTO
+
+changeCredentials PROTO
 
 printMonthlyStatement PROTO,
 	account: PTR userAccount

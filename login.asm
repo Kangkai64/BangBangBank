@@ -13,7 +13,7 @@ loginDesign BYTE "Bang Bang Bank Login", NEWLINE,
             "==============================", NEWLINE,
             "User Login", NEWLINE,
             "==============================", NEWLINE, 0
-
+promptPasswordMsg BYTE "Please enter your password: ", 0
 loginAttemptLimitReachedMsg BYTE NEWLINE, "You have reached your login attempt limit. Please try again at ", 0
 loginSuccessMsg BYTE "Login successful! Welcome to Bang Bang Bank.", NEWLINE, 0
 loginFailMsg BYTE NEWLINE, "Login failed. Incorrect username or password.", NEWLINE, 0
@@ -33,7 +33,7 @@ login PROC
     
     ; Read username and password
     INVOKE promptForUsername, OFFSET inputUsername
-    INVOKE promptForPassword, OFFSET inputPassword
+    INVOKE promptForPassword, OFFSET inputPassword, ADDR promptPasswordMsg
     
     ; Copy input username to user structure
     INVOKE Str_copy, ADDR inputUsername, ADDR user.username
