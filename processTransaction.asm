@@ -26,7 +26,6 @@ processTransaction PROC,
 	;Prompt recipient account
 	INVOKE promptForRecipientAccNo, OFFSET inputRecipientAccNo
 	INVOKE validateRecipientAcc, OFFSET inputRecipientAccNo
-	;validate recipient account
 	.IF EAX == 0
 		INVOKE printString, ADDR recipientAccNotFound
 		call Wait_Msg
