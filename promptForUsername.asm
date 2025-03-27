@@ -22,7 +22,7 @@ promptForUsername PROC,
 
     mov edx, inputUsernameAddress
     mov ecx, maxBufferSize - 1
-    INVOKE setTxtColor, DEFAULT_COLOR_CODE, INPUTMODE
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, INPUT
     call ReadString
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
 

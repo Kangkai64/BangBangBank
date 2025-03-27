@@ -16,13 +16,13 @@ setTxtColor PROC,
 
 	pushad
 
-	.IF colorMode == CUSTOMMODE
+	.IF colorMode == CUSTOM
 		movzx eax, colorCode
 		call SetTextColor
-	.ELSEIF colorMode == DATEMODE
+	.ELSEIF colorMode == DATE
 		mov eax, DATE_COLOR_CODE
 		call SetTextColor
-	.ELSEIF colorMode == INPUTMODE
+	.ELSEIF colorMode == INPUT
 		mov eax, INPUT_COLOR_CODE
 		call SetTextColor
 	.ELSE

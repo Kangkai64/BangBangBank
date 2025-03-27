@@ -61,9 +61,9 @@ copy_date:
 
 	; Display date
 	INVOKE printString, ADDR dateHeader
-	INVOKE setTxtColor, colorCode
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
 	INVOKE printString, ADDR timeDate
-	INVOKE setTxtColor, defaultColor
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
 	; Display change credentials design
 	INVOKE printString, ADDR changeCredentialsDesign
 
