@@ -10,8 +10,6 @@ INCLUDE BangBangBank.inc
 
 .data
 dateHeader BYTE "Today is ", 0
-colorCode BYTE (yellow + (black SHL 4))
-defaultColor BYTE ?
 currentTime SYSTEMTIME <>
 timeOutputBuffer BYTE 32 DUP(?)
 timeDate BYTE 16 DUP(?)
@@ -29,9 +27,6 @@ password BYTE 255 DUP("?")
 .code
 displayMainMenu PROC
 	call Clrscr
-	; Get console default text color
-	call GetTextColor
-	mov defaultColor, al
 
 	; Get current time and format it in DD/MM/YYYY HH:MM:SS format
 	INVOKE GetLocalTime, ADDR currentTime
@@ -54,9 +49,9 @@ displayMainMenu PROC
 
 	; Display the main menu
 	INVOKE printString, ADDR dateHeader
-	INVOKE setTxtColor, colorCode
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
 	INVOKE printString, ADDR timeDate
-	INVOKE setTxtColor, defaultColor
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
 	INVOKE printString, ADDR mainMenuDesign
 	INVOKE promptForIntChoice, 1, 2
 	

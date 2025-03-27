@@ -19,10 +19,12 @@ exitMessage BYTE "Thank you for using Bang Bang Bank!", 0
 promptForIntChoice PROC USES ebx ecx edx,
     lowerBound: BYTE,
     upperBound: BYTE
-    
+
     INVOKE printString, OFFSET promptMsg
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, INPUT
     call ReadChar
     call WriteChar
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
     call Crlf
     call Crlf
     

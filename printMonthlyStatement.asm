@@ -9,8 +9,6 @@ INCLUDE BangBangBank.inc
 
 .data
 dateHeader BYTE "Today is ", 0
-colorCode BYTE (yellow + (black SHL 4))
-defaultColor BYTE ?
 currentTime SYSTEMTIME <>
 timeOutputBuffer BYTE 32 DUP(?)
 timeDate BYTE 16 DUP(?)
@@ -40,21 +38,12 @@ printMonthlyStatement PROC,
 	; Read user account from userAccount.txt
 	INVOKE inputFromTransaction, ADDR transaction
 
-    ; Get console default text color
-    call GetTextColor
-    mov defaultColor, al
     
     ; Display statement header with highlighted title
-    mov edx, OFFSET statementHeader
-    call SetTextColor
-    mov al, colorCode
-    call SetTextColor
-    call WriteString
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
+	INVOKE printString, ADDR statementHeader
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
     call Crlf
-
-    ; Restore default text color
-    mov al, defaultColor
-    call SetTextColor
 
     ; Display User's info
     INVOKE printString, ADDR nameLabel

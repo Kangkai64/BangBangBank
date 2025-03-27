@@ -10,7 +10,7 @@ INCLUDE BangBangBank.inc
 .data
     promptTransactionAmount BYTE "Enter transaction amount: ", 0
     invalidInputMsg BYTE "Invalid amount. Please enter a positive number.", 13, 10, 0
-    overflowMsg BYTE "Amount too large. Maximum allowed is 999999999.", 13, 10, 0
+    overflowMsg BYTE "Amount too large. Maximum allowed is 999,999,999.", 13, 10, 0
     notSufficientBalance BYTE "Not sufficient balance... ", NEWLINE, 0
 
 .code

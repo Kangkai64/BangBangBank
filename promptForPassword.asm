@@ -24,6 +24,7 @@ promptForPassword PROC,
     ; Set up registers for password reading
     mov edi, inputPasswordAddress  ; Destination for actual password
     xor ecx, ecx                   ; Character counter
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, INPUT
     
 readNextChar:
     ; Check if we've reached buffer limit
@@ -76,6 +77,7 @@ finishReading:
     call Crlf
     ; Trims the password
     INVOKE myStr_trim, inputPasswordAddress, " "
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
 
     popad
     ret

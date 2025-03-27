@@ -130,7 +130,8 @@ promptForIntChoice PROTO,
 Wait_Msg PROTO
 
 setTxtColor PROTO,
-	colorCode: BYTE
+    colorCode: BYTE,
+	colorMode: BYTE
 
 login PROTO
 
@@ -194,6 +195,16 @@ printUserAccount PROTO,
 printUserTransaction PROTO, 
     transaction: PTR userTransaction
 
+
+;-------------------------
+; colorMode values
+;-------------------------
+DATE               EQU 1
+INPUT              EQU 2
+CUSTOM             EQU 9
+DEFAULT_COLOR_CODE EQU 07h ; White foreground and black background
+DATE_COLOR_CODE    EQU (yellow + (black SHL 4))
+INPUT_COLOR_CODE   EQU (lightGreen + (black SHL 4))
 
 ;-------------------------
 ; pritnMode values

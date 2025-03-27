@@ -22,7 +22,9 @@ promptForUsername PROC,
 
     mov edx, inputUsernameAddress
     mov ecx, maxBufferSize - 1
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, INPUTMODE
     call ReadString
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
 
     ; Trims the username
     INVOKE myStr_trim, inputUsernameAddress, " "
