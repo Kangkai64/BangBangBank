@@ -224,6 +224,224 @@ secondDone:
     ret
 formatSystemTime ENDP
 
+;--------------------------------------------------------
+; Leap year calculation function
+; Input: Year in AX
+; Output: Carry flag set if leap year, clear otherwise
+;--------------------------------------------------------
+checkLeapYear PROC
+    push bx
+    push dx
+    
+    ; Divisible by 4?
+    mov bx, 4
+    div bx
+    cmp dx, 0
+    jne notLeapYear
+    
+    ; Divisible by 100?
+    mov ax, [esp+4]  ; Restore original year
+    mov bx, 100
+    div bx
+    cmp dx, 0
+    jne isLeapYear
+    
+    ; Divisible by 400?
+    mov ax, [esp+4]
+    mov bx, 400
+    div bx
+    cmp dx, 0
+    jne notLeapYear
+    
+isLeapYear:
+    pop dx
+    pop bx
+    STC  ; Set carry flag
+    ret
+
+notLeapYear:
+    pop dx
+    pop bx
+    CLC  ; Clear carry flag
+    ret
+checkLeapYear ENDP
+
+;--------------------------------------------------------
+; Helper function for precise date and time calculation
+; (Leap year, different month lengths etc.)
+; Increment by 5 hours with absolute precision
+; Receives : ESI points to timestamp string
+; Returns : Incremented timestamp in ESI
+;--------------------------------------------------------
+.data
+; Days in each month (non-leap year)
+monthLengths BYTE 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+
+.code
+calculateDateTime PROC
+
+; Precise timestamp increment routine
+IncrementTimestamp:
+    
+    ; Temporary stack storage for parsed values
+    sub esp, 24
+    
+    ; Parse year (positions 6-9)
+    xor eax, eax        ; Clear accumulator
+    mov edi, 6          ; Starting index
+    mov ecx, 4          ; 4 digits to parse
+    
+parseYear:
+    movzx ebx, BYTE PTR [esi+edi]  ; Load digit
+    sub bl, '0'                    ; Convert to numeric value
+    
+    ; Multiply current accumulated value by 10
+    mov edx, 10
+    mul edx
+    
+    ; Add new digit
+    add eax, ebx
+    
+    inc edi
+    LOOP parseYear
+    
+    ; Store parsed year value
+    mov [esp], ax
+    
+    ; Parse month (positions 3-4)
+    mov al, [esi+3]
+    sub al, '0'
+    mov bl, 10
+    mul bl
+    mov bl, [esi+4]
+    sub bl, '0'
+    add al, bl
+    mov [esp+4], al     ; Store month (1-12)
+    
+    ; Parse day (positions 0-1)
+    mov al, [esi]
+    sub al, '0'
+    mov bl, 10
+    mul bl
+    mov bl, [esi+1]
+    sub bl, '0'
+    add al, bl
+    mov [esp+5], al     ; Store day
+    
+    ; Parse hour (positions 11-12)
+    mov al, [esi+11]
+    sub al, '0'
+    mov bl, 10
+    mul bl
+    mov bl, [esi+12]
+    sub bl, '0'
+    add al, bl
+    mov [esp+6], al     ; Store hour
+    
+    ; Add 5 hours
+    add byte ptr [esp+6], 5
+    
+    ; Check hour overflow
+    cmp byte ptr [esp+6], 24
+    jl noHourOverflow
+    
+    ; Adjust hour and increment day
+    sub byte ptr [esp+6], 24
+    inc byte ptr [esp+5]
+    
+    ; Determine max days for month
+    movzx bx, byte ptr [esp+4]
+    dec bx              ; 0-based index
+    mov al, monthLengths[bx]
+    
+    ; Check for leap year in February
+    cmp bx, 1           ; February
+    jne checkDayOverflow
+    
+    ; Verify leap year
+    push ax
+    mov ax, [esp+2]     ; Year
+    call checkLeapYear
+    pop ax
+    jnc checkDayOverflow
+    
+    ; Leap year - February has 29 days
+    inc al
+    
+checkDayOverflow:
+    ; Check if day exceeds month length
+    cmp byte ptr [esp+5], al
+    jle noHourOverflow
+    
+    ; Month overflow
+    sub byte ptr [esp+5], al
+    inc byte ptr [esp+4]
+    
+    ; Check month overflow (beyond 12)
+    cmp byte ptr [esp+4], 12
+    jle noHourOverflow
+    
+    ; Year rollover
+    sub byte ptr [esp+4], 12
+    inc word ptr [esp]
+    
+noHourOverflow:
+    ; Reconstruct timestamp string with precision
+    
+    ; Year Reconstruction
+    mov edi, 0      ; Index for year value in stack
+    mov ecx, 4      ; 4 digits to process
+    mov ebx, 9      ; Starting index in timestamp string
+    mov ax, [esp+edi]  ; Load year from stack
+
+buildYear:  
+    push ebx
+    xor edx, edx
+    mov ebx, 10
+    div bx                 ; Convert numeric value to ASCII
+    add dl, '0'
+    pop ebx                    ; Restore the index here
+    mov [esi+ebx], dl          ; Store in timestamp string
+    dec ebx
+    LOOP buildYear
+
+    ; Month reconstruction
+    xor edx, edx
+    mov al, [esp+4]
+    mov bl, 10
+    div bl              ; AL = tens digit, AH = ones digit
+    add al, '0'
+    add ah, '0'
+    mov [esi+3], al
+    mov [esi+4], ah
+    
+    ; Day reconstruction
+    xor edx, edx
+    mov al, [esp+5]
+    cbw
+    mov bl, 10
+    div bl              ; AL = tens digit, AH = ones digit
+    add al, '0'
+    add ah, '0'
+    mov [esi], al
+    mov [esi+1], ah
+    
+    ; Hour reconstruction
+    xor edx, edx
+    mov al, [esp+6]
+    cbw
+    mov bl, 10
+    div bl              ; AL = tens digit, AH = ones digit
+    add al, '0'
+    add ah, '0'
+    mov [esi+11], al
+    mov [esi+12], ah
+    
+    ; Cleanup stack
+    add esp, 24
+    ret
+calculateDateTime ENDP
+
 ;--------------------------------------------------------------------------------
 ; This module will clear the user credential structure for each loop
 ; Receives: Address / Pointer the user credential structure

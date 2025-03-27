@@ -36,10 +36,6 @@ changeCredentials PROC
 	
 	call Clrscr
 
-	; Get console default text color
-	call GetTextColor
-	mov defaultColor, al
-
 	; Get current time and format it in DD/MM/YYYY HH:MM:SS format
 	INVOKE GetLocalTime, ADDR currentTime
 	INVOKE formatSystemTime, ADDR currentTime, ADDR timeOutputBuffer

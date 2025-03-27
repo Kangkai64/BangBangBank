@@ -62,39 +62,8 @@ login PROC
     ; Parse timestamp to get original hour and add 5 hours for unlock time
     lea esi, user.firstLoginAttemptTimestamp
 
-    ; Skip to hour part (format is DD/MM/YYYY HH:MM:SS)
-    ; Start at position 11 which is the first digit of the hour
-    add esi, 11
-
-    ; Extract hour as text and convert to integer
-    mov al, [esi]      ; First digit of hour
-    sub al, '0'        ; Convert from ASCII
-    mov bl, 10         
-    mul bl             ; Multiply by 10
-    mov bl, [esi+1]    ; Second digit of hour
-    sub bl, '0'        ; Convert from ASCII
-    add al, bl         ; Full hour value in AL
-
-    ; Add 5 hours for unlock time
-    add al, 5
-
-    ; Handle day boundary crossing
-    cmp al, 24
-    jl noWrapDay
-    sub al, 24  ; Wrap around to next day
-
-    noWrapDay:
-    ; Convert back to string format (2 digits)
-    mov bl, 10
-    div bl              ; AL = tens digit, AH = ones digit
-    add al, '0'         ; Convert back to ASCII
-    add ah, '0'         ; Convert back to ASCII
-
-    ; Move back the updated time into ESI
-    mov [esi], al
-    mov [esi+1], ah 
-
-    sub esi, 11 ; Point to the start of timestamp
+    ; Perform precise timestamp increment
+    call calculateDateTime
 
     ; Display the unlock time
     INVOKE printString, esi

@@ -79,6 +79,10 @@ formatSystemTime PROTO,
     systemTimePtr:PTR SYSTEMTIME,
     outputBuffer:PTR BYTE
 
+checkLeapYear PROTO
+
+calculateDateTime PROTO
+
 clearUserCredential PROTO,
     pUser:PTR userCredential
 
