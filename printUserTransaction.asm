@@ -22,86 +22,32 @@ printUserTransaction PROC,
     ;printMode: DWORD ; Decide print what info
 
     pushad
+    
+    INVOKE printString, ADDR dateLabel
+    mov esi, transaction
+    add esi, OFFSET userTransaction.date
+    INVOKE printString, esi
 
-    ;cmp printMode, PRINTMODE_TRANSACTION_ID
-    ;je print_transaction_id
-
-    ;cmp printMode, PRINTMODE_TRANSACTION_TYPE
-    ;je print_transaction_type
-
-    ;cmp printMode, PRINTMODE_AMOUNT
-    ;je print_amount
-
-    ;jmp print_all
-
-;print_transaction_id:
-    ; Print transaction ID
+    INVOKE printString, ADDR transactionTypeLabel
+    mov esi, transaction
+    add esi, OFFSET userTransaction.transaction_type
+    INVOKE printString, esi
+    
     INVOKE printString, ADDR transactionIdLabel
     mov esi, transaction
     add esi, OFFSET userTransaction.transaction_id
     INVOKE printString, esi
 
-    ;jmp done
+    INVOKE printString, ADDR amountLabel
+    mov esi, transaction
+    add esi, OFFSET userTransaction.amount
+    INVOKE printString, esi
 
-;print_transaction_type: 
-    ; Print transaction type
-    ;mov esi, transaction
-    ;add esi, OFFSET userTransaction.transaction_type
-    ;INVOKE printString, esi
-
-    ;jmp done
-
-;print_amount:
-    ; Print transaction amount
-    ;INVOKE printString, ADDR amountLabel
-    ;mov esi, transaction
-    ;add esi, OFFSET userTransaction.amount
-    ;INVOKE printString, esi
-    
-    ;jmp done
-    
-;print_all: 
-    ; Print transaction ID
-    ;INVOKE printString, ADDR transactionIdLabel
-    ;mov esi, transaction
-    ;add esi, OFFSET userTransaction.transaction_id
-    ;INVOKE printString, esi
-    ;call Crlf
-
-    ; Print customer ID
-    ;INVOKE printString, ADDR customerIdLabel
-    ;mov esi, transaction
-    ;add esi, OFFSET userTransaction.customer_id
-    ;INVOKE printString, esi
-    ;call Crlf
-    
-    ; Print transaction type
-    ;INVOKE printString, ADDR transactionTypeLabel
-    ;mov esi, transaction
-    ;add esi, OFFSET userTransaction.transaction_type
-    ;INVOKE printString, esi
-    ;call Crlf
-    
-    ; Print amount
-    ;INVOKE printString, ADDR amountLabel
-    ;mov esi, transaction
-    ;add esi, OFFSET userTransaction.amount
-    ;INVOKE printString, esi
-    ;call Crlf
-    
-    ; Print date
-    ;INVOKE printString, ADDR dateLabel
-    ;mov esi, transaction
-    ;add esi, OFFSET userTransaction.date
-    ;INVOKE printString, esi
-    ;call Crlf
-    
-    ; Print time
-    ;INVOKE printString, ADDR timeLabel
-    ;mov esi, transaction
-    ;add esi, OFFSET userTransaction.time
-    ;INVOKE printString, esi
-    ;call Crlf
+    INVOKE printString, ADDR customerIdLabel
+    mov esi, transaction
+    add esi, OFFSET userTransaction.customer_id
+    INVOKE printString, esi
+    call Crlf
 
 done:    
     popad

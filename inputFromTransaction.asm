@@ -23,6 +23,7 @@ currentLineStart   DWORD 0
 foundTransaction   BYTE 0
 userCustomerID     BYTE 32 DUP(?)
 DepositStr         BYTE "Deposit", 0
+TransferStr        BYTE "Transfer", 0
 
 .code
 inputFromTransaction PROC,
@@ -127,10 +128,9 @@ searchTransactionLoop:
         ; Parse transaction_type field
         mov edi, OFFSET tempBuffer
         call ParseCSVField
-
-        ; Check if transaction type is Deposit
-        INVOKE Str_compare, ADDR tempBuffer, ADDR DepositStr
-        .IF ZERO?
+        ; Check if transaction type is Transfer
+        ;INVOKE Str_compare, ADDR tempBuffer, ADDR TransferStr
+        ;.IF ZERO?
             ; Found the transaction! Set flag
             mov foundTransaction, 1
         
@@ -140,8 +140,23 @@ searchTransactionLoop:
             ; Parse all fields for this transaction
             INVOKE parseUserTransaction, transaction
         
-            jmp readTransactionFileExit
-        .ENDIF
+            INVOKE printUserTransaction,transaction
+        ;.ENDIF
+
+        ; Check if transaction type is Deposit
+        ;INVOKE Str_compare, ADDR tempBuffer, ADDR DepositStr
+        ;.IF ZERO?
+            ; Found the transaction! Set flag
+            ;mov foundTransaction, 1
+        
+            ; Return to the start of this line
+            ;mov esi, currentLineStart
+        
+            ; Parse all fields for this transaction
+            ;INVOKE parseUserTransaction, transaction
+        
+            ;INVOKE printUserTransaction,transaction
+        ;.ENDIF
     .ENDIF
     
     ; CustomerID didn't match, skip to next line
