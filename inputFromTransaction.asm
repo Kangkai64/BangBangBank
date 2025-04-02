@@ -129,8 +129,24 @@ searchTransactionLoop:
         mov edi, OFFSET tempBuffer
         call ParseCSVField
         ; Check if transaction type is Transfer
-        ;INVOKE Str_compare, ADDR tempBuffer, ADDR TransferStr
-        ;.IF ZERO?
+        INVOKE Str_compare, ADDR tempBuffer, ADDR TransferStr
+        .IF ZERO?
+            ; Found the transaction! Set flag
+            mov foundTransaction, 1
+        
+            ; Return to the start of this line
+            mov esi, currentLineStart
+        
+            ; Parse all fields for this transaction
+            INVOKE parseUserTransaction, transaction
+        
+            INVOKE printUserTransaction, transaction
+            jmp searchTransactionLoop
+        .ENDIF
+
+        ; Check if transaction type is Deposit
+        INVOKE Str_compare, ADDR tempBuffer, ADDR DepositStr
+        .IF ZERO?
             ; Found the transaction! Set flag
             mov foundTransaction, 1
         
@@ -141,22 +157,8 @@ searchTransactionLoop:
             INVOKE parseUserTransaction, transaction
         
             INVOKE printUserTransaction,transaction
-        ;.ENDIF
-
-        ; Check if transaction type is Deposit
-        ;INVOKE Str_compare, ADDR tempBuffer, ADDR DepositStr
-        ;.IF ZERO?
-            ; Found the transaction! Set flag
-            ;mov foundTransaction, 1
-        
-            ; Return to the start of this line
-            ;mov esi, currentLineStart
-        
-            ; Parse all fields for this transaction
-            ;INVOKE parseUserTransaction, transaction
-        
-            ;INVOKE printUserTransaction,transaction
-        ;.ENDIF
+            jmp searchTransactionLoop
+        .ENDIF
     .ENDIF
     
     ; CustomerID didn't match, skip to next line

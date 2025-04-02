@@ -226,4 +226,6 @@ changeCredentials PROTO
 printMonthlyStatement PROTO,
 	account: PTR userAccount
 
+MSnote PROTO
+
 .LIST
