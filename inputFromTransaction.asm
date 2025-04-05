@@ -234,6 +234,20 @@ parseNextTransactionField:
     add edi, OFFSET userTransaction.amount
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
+    ; Parse balance field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.balance
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse transacationdetail field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.transaction_detail
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+
     ; Parse date field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField

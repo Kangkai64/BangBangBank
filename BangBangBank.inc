@@ -45,6 +45,8 @@ userTransaction STRUCT
     customer_id       BYTE 32 DUP(?)
     transaction_type  BYTE 32 DUP(?)
     amount            BYTE 32 DUP(?)
+    balance           BYTE 32 DUP(?)
+    transaction_detail BYTE 255 DUP(?)
     date              BYTE 32 DUP(?)
     time              BYTE 32 DUP(?)
 userTransaction ENDS

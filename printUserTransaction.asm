@@ -13,6 +13,8 @@ transactionIdLabel    BYTE "Transaction ID: ", 0
 customerIdLabel       BYTE "Customer ID: ", 0
 transactionTypeLabel  BYTE "Transaction Type: ", 0
 amountLabel           BYTE "Amount: RM ", 0
+balanceLabel          BYTE "Balance: RM ", 0
+transactiondetailLabel BYTE "Transaction Detail: ", 0
 dateLabel             BYTE "Date: ", 0
 timeLabel             BYTE "Time: ", 0
 
@@ -37,6 +39,17 @@ printUserTransaction PROC,
     mov esi, transaction
     add esi, OFFSET userTransaction.transaction_id
     INVOKE printString, esi
+
+    INVOKE printString, ADDR balanceLabel
+    mov esi, transaction
+    add esi, OFFSET userTransaction.balance
+    INVOKE printString, esi
+
+    INVOKE printString, ADDR transactiondetailLabel
+    mov esi, transaction
+    add esi, OFFSET userTransaction.transaction_detail
+    INVOKE printString, esi
+    call Crlf
 
     INVOKE printString, ADDR amountLabel
     mov esi, transaction

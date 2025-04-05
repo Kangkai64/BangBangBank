@@ -188,6 +188,14 @@ printMonthlyStatement PROC,
     ;mov dh, 30
     ;call Gotoxy
     ;INVOKE printString, ADDR endBalValue
+
+    ; Copy out the customer_id and store it into user account structure
+     mov esi, [account]
+     add esi, OFFSET userAccount.customer_id
+     INVOKE Str_copy, esi, ADDR transaction.customer_id
+
+    ; Transaction details
+    INVOKE inputFromTransaction, ADDR transaction
     
     mov dl, 20
     mov dh, 31
@@ -288,5 +296,7 @@ mov dl, 5
     mov dh, 49
     call Gotoxy
     INVOKE printString, ADDR menuContinue
+
+    ret
 MSnote ENDP
 END

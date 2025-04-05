@@ -1,16 +1,16 @@
-transaction_id,customer_id,transaction_type,amount,date,time
-T0001,C001,Transfer,500.00,10/03/2025,09:15:30
-T0002,C002,Transfer,200.00,10/03/2025,10:20:45
-T0003,C003,Transfer,1500.00,10/03/2025,11:25:50 
-T0004,C001,Deposit,500.00,11/03/2025,11:15:30
-T0005,C001,Transfer,500.00,12/03/2025,12:15:30
-T0006,C001,Deposit,500.00,13/03/2025,09:15:30
-T0007,C001,Deposit,500.00,11/03/2025,11:15:30
-T0008,C001,Transfer,500.00,12/03/2025,12:15:30
-T0009,C001,Deposit,500.00,13/03/2025,09:15:30
-T0010,C001,Deposit,500.00,11/03/2025,11:15:30
-T0011,C001,Transfer,500.00,12/03/2025,12:15:30
-T0012,C001,Deposit,500.00,13/03/2025,09:15:30
-T0004,C001,Deposit,500.00,11/03/2025,11:15:30
-T0005,C001,Transfer,500.00,12/03/2025,12:15:30
-T0006,C001,Deposit,500.00,13/03/2025,09:15:30
+transaction_id,customer_id,transaction_type,amount,balance,transaction_detail,date,time
+T0001,C001,Transfer,-723.45,1276.55,Transfer sent to another account,03/02/2025,14:35:22
+T0002,C002,Transfer,-189.99,810.01,Transfer sent to another account,15/01/2025,09:47:18
+T0003,C003,Transfer,-1250.75,749.25,Transfer sent to another account,27/01/2025,16:12:54
+T0004,C001,Deposit,+852.33,2128.88,Cash deposit into account,04/02/2025,10:23:41
+T0005,C001,Transfer,-345.67,1783.21,Transfer sent to another account,08/02/2025,13:19:05
+T0006,C001,Deposit,+1125.50,2908.71,Cash deposit into account,12/02/2025,08:52:37
+T0007,C001,Deposit,+478.92,3387.63,Cash deposit into account,18/02/2025,11:45:29
+T0008,C001,Transfer,-892.14,2495.49,Transfer sent to another account,23/02/2025,15:31:46
+T0009,C001,Deposit,+643.21,3138.70,Cash deposit into account,01/03/2025,09:05:12
+T0010,C001,Deposit,+295.75,3434.45,Cash deposit into account,07/03/2025,12:39:58
+T0011,C001,Transfer,-567.89,2866.56,Transfer sent to another account,15/03/2025,14:28:33
+T0012,C001,Deposit,+731.45,3598.01,Cash deposit into account,21/03/2025,10:17:24
+T0013,C001,Deposit,+419.83,4017.84,Cash deposit into account,24/03/2025,16:42:19
+T0014,C001,Transfer,-634.29,3383.55,Transfer sent to another account,28/03/2025,11:09:47
+T0015,C001,Deposit,+519.67,3903.22,Cash deposit into account,02/04/2025,13:54:36
