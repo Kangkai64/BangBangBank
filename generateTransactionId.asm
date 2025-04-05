@@ -8,10 +8,10 @@ INCLUDE BangBangBank.INC
 ; Last update: 01/04/2025
 ;--------------------------------------------------------------------------------
 .data
-transFileNameNew      BYTE "Users\transactionLog.txt", 0
-fileHandleNew         DWORD ?
-readBufferNew         BYTE 20480 DUP(?)
-bytesReadNew          DWORD ?
+transFileName         BYTE "Users\transactionLog.txt", 0
+fileHandle            DWORD ?
+readBuffer            BYTE 20480 DUP(?)
+bytesRead             DWORD ?
 errorMsgNew           BYTE "Error: Transaction file cannot be opened or read, starting with T0001", NEWLINE, 0
 transIDPrefix         BYTE "T", 0
 defaultTransID        BYTE "T0001", 0
@@ -31,7 +31,7 @@ generateTransactionID PROC,
     
     ; Open the transaction file
     INVOKE CreateFile, 
-        ADDR transFileNameNew,          ; lpFileName
+        ADDR transFileName,          ; lpFileName
         GENERIC_READ,                   ; dwDesiredAccess
         FILE_SHARE_READ,                ; dwShareMode
         NULL,                           ; lpSecurityAttributes
@@ -39,23 +39,23 @@ generateTransactionID PROC,
         FILE_ATTRIBUTE_NORMAL,          ; dwFlagsAndAttributes
         NULL                            ; hTemplateFile
         
-    mov fileHandleNew, eax
+    mov fileHandle, eax
     
     ; Check if file opened successfully
     cmp eax, INVALID_HANDLE_VALUE
-    jne fileOpenSuccessNew
+    jne fileOpenSuccess
     
     ; File open error or file doesn't exist, use default ID T0001
     INVOKE Str_copy, ADDR defaultTransID, transIDBuffer
     jmp genTransIDExit
     
-fileOpenSuccessNew:
+fileOpenSuccess:
     ; Read file content into buffer
     INVOKE ReadFile, 
-        fileHandleNew,                 ; hFile
-        ADDR readBufferNew,            ; lpBuffer
-        SIZEOF readBufferNew - 1,      ; nNumberOfBytesToRead
-        ADDR bytesReadNew,             ; lpNumberOfBytesRead
+        fileHandle,                 ; hFile
+        ADDR readBuffer,            ; lpBuffer
+        SIZEOF readBuffer - 1,      ; nNumberOfBytesToRead
+        ADDR bytesRead,             ; lpNumberOfBytesRead
         NULL                           ; lpOverlapped
     
     ; Check if read was successful
@@ -65,35 +65,35 @@ fileOpenSuccessNew:
     .ENDIF
     
     ; Add null terminator to buffer
-    mov edi, OFFSET readBufferNew
-    add edi, bytesReadNew
+    mov edi, OFFSET readBuffer
+    add edi, bytesRead
     mov BYTE PTR [edi], 0
     
     ; Check if file is empty or too small (only header)
-    cmp bytesReadNew, 30  ; Approximate minimum size for header + one record
+    cmp bytesRead, 30  ; Approximate minimum size for header + one record
     jb useDefaultID
     
     ; Initialize highest transaction number
     mov highestTransNum, 0
     
     ; Skip the header line
-    mov esi, OFFSET readBufferNew
+    mov esi, OFFSET readBuffer
     
-skipHeaderLoopNew:
+skipHeaderLoop:
     mov al, [esi]
     cmp al, 0           ; End of buffer?
     je processTransIDs  ; File is empty or corrupted
     cmp al, 10          ; LF - new line?
     je headerSkipped
     cmp al, 13          ; CR?
-    je skipCRNew
+    je skipCR
     inc esi
-    jmp skipHeaderLoopNew
+    jmp skipHeaderLoop
     
-skipCRNew:
+skipCR:
     inc esi             ; Skip CR
     cmp BYTE PTR [esi], 10  ; Check for LF
-    jne skipHeaderLoopNew
+    jne skipHeaderLoop
     inc esi             ; Skip LF
     
 headerSkipped:
@@ -101,7 +101,7 @@ headerSkipped:
     
 processTransIDs:
     ; Process all transaction IDs in the file
-    mov esi, OFFSET readBufferNew
+    mov esi, OFFSET readBuffer
     
 findNextTransIDLoop:
     ; Check for end of buffer
@@ -138,7 +138,7 @@ copyTransIDLoop:
     jb copyTransIDLoop
     
     ; ID too long, skip to next line
-    jmp skipToNextLineNew
+    jmp skipToNextLine
     
 endOfTransID:
     ; Null-terminate the ID
@@ -155,7 +155,7 @@ endOfTransID:
     ; Convert numeric string to integer using custom conversion
     push esi        ; Save position in main buffer
     mov esi, edi    ; Point to numeric part of transaction ID
-    call StrToInt   ; Call our custom conversion function (result in EAX)
+    call StringToInt   ; Call our custom conversion function (result in EAX)
     
     ; If valid and higher than current highest, update highest
     cmp eax, highestTransNum
@@ -164,36 +164,36 @@ endOfTransID:
     
 notValidTransID2:
     pop esi         ; Restore position in main buffer
-    jmp skipToNextLineNew
+    jmp skipToNextLine
     
 notValidTransID:
     ; Skip to next line or continue processing
-    jmp skipToNextLineNew
+    jmp skipToNextLine
     
 notTransIDStart:
     ; Not a transaction ID start, move to next character
     inc esi
     jmp findNextTransIDLoop
     
-skipToNextLineNew:
+skipToNextLine:
     ; Skip to the start of the next line
     mov al, [esi]
     cmp al, 0       ; End of file?
     je doneProcessingIDs
     cmp al, 10      ; LF?
-    je nextLineNew
+    je nextLine
     cmp al, 13      ; CR?
-    je skipToNextCRNew
+    je skipToNextCR
     inc esi
-    jmp skipToNextLineNew
+    jmp skipToNextLine
     
-skipToNextCRNew:
+skipToNextCR:
     inc esi         ; Skip CR
     cmp BYTE PTR [esi], 10  ; Check for LF
-    jne skipToNextLineNew
+    jne skipToNextLine
     inc esi         ; Skip LF
     
-nextLineNew:
+nextLine:
     inc esi         ; Skip LF
     jmp findNextTransIDLoop
     
@@ -245,59 +245,10 @@ useDefaultID:
     INVOKE Str_copy, ADDR defaultTransID, transIDBuffer
     
 closeFileAndExit:
-    INVOKE CloseHandle, fileHandleNew
+    INVOKE CloseHandle, fileHandle
     
 genTransIDExit:
     popad
-    ret
-
-;--------------------------------------------------------------------------------
-; StrToInt - Converts a string to an integer
-; Receives: ESI = pointer to null-terminated string of digits
-; Returns: EAX = integer value, CF=1 if error occurred
-; Affects: EAX, ECX, EDX
-;--------------------------------------------------------------------------------
-StrToInt:
-    push ebx
-    mov eax, 0      ; Initialize result
-    mov ebx, 10     ; Base 10 for multiplication
-    
-StrToIntLoop:
-    mov cl, [esi]   ; Get character
-    cmp cl, 0       ; Check for end of string
-    je StrToIntDone
-    
-    ; Verify that character is a digit
-    cmp cl, '0'
-    jb StrToIntError
-    cmp cl, '9'
-    ja StrToIntError
-    
-    ; Convert character to digit
-    sub cl, '0'
-    movzx ecx, cl
-    
-    ; Multiply result by 10 and add new digit
-    mul ebx
-    add eax, ecx
-    
-    ; Check for overflow
-    jc StrToIntError
-    
-    ; Move to next character
-    inc esi
-    jmp StrToIntLoop
-    
-StrToIntError:
-    stc             ; Set carry flag to indicate error
-    mov eax, 0      ; Return 0 on error
-    jmp StrToIntExit
-    
-StrToIntDone:
-    clc             ; Clear carry flag to indicate success
-    
-StrToIntExit:
-    pop ebx
     ret
 
 ;--------------------------------------------------------------------------------

@@ -17,13 +17,18 @@ transactionPageTitle BYTE "Bang Bang Bank Transaction", NEWLINE,
 transactionDetailTitle BYTE "Transaction details", NEWLINE,
                             "==============================", NEWLINE,0
 recipientAccNotFound BYTE "Recipient account not found...", NEWLINE,0
-amount BYTE "Amount : ",0
+selfAccountErrorMsg BYTE "You cannot enter your own account number as recipient.", NEWLINE, 0
+amount BYTE "Amount : RM ",0
 confirmMsg BYTE "Press 1 to confirm and press 2 to cancel", NEWLINE,0
+transactionIdMsg BYTE "Transaction ID: ", 0
 recipientAccMsg BYTE "Account No: ",0
+recipientNameMsg BYTE "Recipient Name: ", 0  
+transTypeMsg BYTE "Transaction Type: Transaction", 0
 transactionSuccessful BYTE "Transaction Successful!",0
 transactionCancel BYTE "Transaction Cancelled!",0
 inputRecipientAccNo BYTE 32 DUP(?)
 inputTransactionAmount BYTE 32 DUP(?)
+recipientName BYTE 32 DUP(?)
 newTransactionId BYTE 32 DUP(?)
 .code
 processTransaction PROC,
@@ -52,8 +57,9 @@ processTransaction PROC,
     ;Display transaction page
     INVOKE printString, ADDR transactionPageTitle
 
-    ;Prompt recipient account
+    ; prompt for recipient account number
     INVOKE promptForRecipientAccNo, OFFSET inputRecipientAccNo
+
     ;validate recipient account
     INVOKE validateRecipientAcc, OFFSET inputRecipientAccNo
     .IF EAX == 0
@@ -65,24 +71,33 @@ processTransaction PROC,
     ;prompt transaction amount
     INVOKE promptForTransactionAmount, OFFSET inputTransactionAmount, account
 
-    ; Convert transaction amount to numeric value
-    ;INVOKE StringToInt, OFFSET inputTransactionAmount
-    ;mov ebx, eax  ; Store numeric amount in ebx
     jmp confirmTransaction
     ; confirm transaction
+
 confirmTransaction:
     INVOKE generateTransactionId, ADDR newTransactionId
     call Clrscr
     INVOKE printString, ADDR transactionDetailTitle
+
+    ; Print transaction id
+    INVOKE printString, ADDR transactionIdMsg
+    INVOKE printString, ADDR newTransactionId
+    Call Crlf
+
+    ; Print recipient's name
+    INVOKE printString, ADDR recipientNameMsg
+    INVOKE printString, ADDR recipientName
     Call Crlf
 
     ; Print recipient's account
     INVOKE printString, ADDR recipientAccMsg
     INVOKE printString, ADDR inputRecipientAccNo
     Call Crlf
-    ; Print Transaction id
-    INVOKE printString, ADDR newTransactionId
+    
+    ; Print transaction type
+    INVOKE printString, ADDR transTypeMsg
     Call Crlf
+  
     ; Print amount
     INVOKE printString, ADDR amount
     ; Convert numeric amount back to string for printing
