@@ -93,6 +93,11 @@ StringToInt PROTO,
 
 IntToString PROTO
 
+StringToDecimal PROTO,
+    pString: PTR BYTE
+
+WriteDecimalNumber PROTO
+
 formatUserData PROTO,
     userPtr:PTR userCredential,
     outputBuffer:PTR BYTE
@@ -155,6 +160,15 @@ promptForRecipientAccNo PROTO,
 
 displayCustomerMenu PROTO,
     user: PTR userCredential
+
+parseOpeningDate PROTO,
+    account: PTR userAccount
+
+parseCurrentDate PROTO,
+    account: PTR userAccount
+
+checkInterest PROTO,
+    account: PTR userAccount
 
 promptForUsername PROTO,
     inputUsernameAddress: PTR BYTE

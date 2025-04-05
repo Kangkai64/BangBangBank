@@ -29,6 +29,8 @@
     <MASM Include="promptForRecipientAccNo.asm" />
     <MASM Include="promptForTransactionAmount.asm" />
     <MASM Include="validateRecipientAcc.asm" />
+    <MASM Include="changeCredentials.asm" />
+    <MASM Include="checkInterest.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />
