@@ -217,25 +217,28 @@ checkInterest PROC,
 
      ; Call parseCurrentDate to extract date components
     INVOKE parseCurrentDate, account
-    
-compare_date:
-    
-    ; Compare years
-    mov eax, currYearInteger
-    cmp eax, openYearInteger
-    jg add_interest
-    jl end_compare
 
-    ; If years are same, compare month
+compare_date:
+    ; Calculate if a full year has passed
+    
+    ; Compare years first - must be at least 1 year difference
+    mov eax, currYearInteger
+    sub eax, openYearInteger    ; Calculate year difference
+    cmp eax, 1
+    jg add_interest            ; If more than 1 year difference, definitely add interest
+    jl end_compare             ; If less than 1 year difference, definitely no interest
+    
+    ; Exactly 1 year difference, now check month
     mov eax, currMonthInteger
     cmp eax, openMonthInteger
-    jg add_interest
-    jl end_compare
-
-    ; If months are equal, compare days
+    jg add_interest            ; If current month > opening month, more than 1 year passed
+    jl end_compare             ; If current month < opening month, less than 1 year passed
+    
+    ; Same month, check day
     mov eax, currDayInteger
     cmp eax, openDayInteger
-    jl end_compare
+    jge add_interest           ; If current day >= opening day, exactly or more than 1 year passed
+    jl end_compare             ; If current day < opening day, less than 1 year passed
 
     
 add_interest: 
