@@ -63,6 +63,9 @@ displayCustomerMenu PROC,
 	; Read user account from userAccount.txt
 	INVOKE inputFromAccount, ADDR account
 
+	;Check apply interest or not
+	INVOKE checkInterest, ADDR account
+
 	; Display the main menu
 	INVOKE printString, ADDR dateHeader
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE

@@ -45,6 +45,8 @@ userTransaction STRUCT
     customer_id       BYTE 32 DUP(?)
     transaction_type  BYTE 32 DUP(?)
     amount            BYTE 32 DUP(?)
+    balance           BYTE 32 DUP(?)
+    transaction_detail BYTE 255 DUP(?)
     date              BYTE 32 DUP(?)
     time              BYTE 32 DUP(?)
 userTransaction ENDS
@@ -90,6 +92,11 @@ StringToInt PROTO,
     pString: PTR BYTE
 
 IntToString PROTO
+
+StringToDecimal PROTO,
+    pString: PTR BYTE
+
+WriteDecimalNumber PROTO
 
 formatUserData PROTO,
     userPtr:PTR userCredential,
@@ -153,6 +160,15 @@ promptForRecipientAccNo PROTO,
 
 displayCustomerMenu PROTO,
     user: PTR userCredential
+
+parseOpeningDate PROTO,
+    account: PTR userAccount
+
+parseCurrentDate PROTO,
+    account: PTR userAccount
+
+checkInterest PROTO,
+    account: PTR userAccount
 
 promptForUsername PROTO,
     inputUsernameAddress: PTR BYTE
@@ -230,5 +246,7 @@ changeCredentials PROTO
 
 printMonthlyStatement PROTO,
 	account: PTR userAccount
+
+MSnote PROTO
 
 .LIST

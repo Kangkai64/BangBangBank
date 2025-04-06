@@ -21,6 +21,7 @@
   <ItemGroup>
     <MASM Include="aboutUs.asm" />
     <MASM Include="changeCredentials.asm" />
+    <MASM Include="checkInterest.asm" />
     <MASM Include="displayCustomerMenu.asm" />
     <MASM Include="displayMainMenu.asm" />
     <MASM Include="encrypt.asm" />

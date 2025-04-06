@@ -1,6 +1,10 @@
 
 INCLUDE BangBangBank.inc
 
+.data
+
+tempNum DWORD ?
+
 .code
 ;--------------------------------------------------------
 ; Helper function to format system time into a timestamp 
@@ -584,6 +588,149 @@ conversion_done:
     ret
     
 IntToString ENDP
+
+;--------------------------------------------------------------------------------
+; StringToDecimal: Converts an ASCII string with decimal point to integer
+; Receives: Pointer to null-terminated string containing a number with decimal point
+; Returns: EAX = converted integer value (decimal part included), ESI = updated position
+;--------------------------------------------------------------------------------
+StringToDecimal PROC USES ebx ecx edx,
+    pString: PTR BYTE
+    
+    LOCAL decimal_found:BYTE    ; Flag for decimal point
+    LOCAL decimal_count:BYTE    ; Count of digits after decimal
+    
+    ; Initialize local variables
+    mov decimal_found, 0
+    mov decimal_count, 0
+    
+    ; Set up pointer to string
+    mov esi, pString
+    
+    ; Check for negative sign
+    xor ebx, ebx            ; EBX = sign flag (0 = positive)
+    mov al, [esi]
+    cmp al, '-'
+    jne parse_digits
+    
+    ; Set negative flag and skip the sign
+    mov ebx, 1
+    inc esi
+    
+parse_digits:
+    xor eax, eax            ; Clear result
+    
+digit_loop:
+    mov dl, [esi]           ; Get current character
+    
+    ; Check for end of string
+    cmp dl, 0
+    je check_decimal_places
+    
+    ; Check for decimal point
+    cmp dl, '.'
+    je found_decimal
+    
+    ; Check if it's a valid digit
+    cmp dl, '0'
+    jl check_decimal_places
+    cmp dl, '9'
+    jg check_decimal_places
+    
+    ; Valid digit, process it
+    imul eax, 10            ; Multiply current result by 10
+    sub dl, '0'             ; Convert ASCII to number
+    add eax, edx            ; Add new digit
+    
+    ; If we're past decimal point, increment decimal counter
+    cmp decimal_found, 1
+    jne next_digit
+    inc decimal_count
+    
+    ; Check if we've processed 2 decimal places already
+    cmp decimal_count, 2
+    je check_decimal_places  ; Stop after 2 decimal places
+    
+    jmp next_digit
+    
+found_decimal:
+    mov decimal_found, 1
+    jmp next_digit
+    
+next_digit:
+    inc esi                 ; Move to next character
+    jmp digit_loop
+    
+check_decimal_places:
+    ; If we found a decimal but didn't get 2 decimal places, pad with zeros
+    cmp decimal_found, 1
+    jne apply_sign
+    
+    cmp decimal_count, 0
+    je add_two_zeros
+    cmp decimal_count, 1
+    je add_one_zero
+    jmp apply_sign
+    
+add_two_zeros:
+    imul eax, 100           ; Multiply by 100 (add 2 zeros)
+    jmp apply_sign
+    
+add_one_zero:
+    imul eax, 10            ; Multiply by 10 (add 1 zero)
+    ; Fall through to apply_sign
+    
+apply_sign:
+    ; Apply sign if negative
+    cmp ebx, 1
+    jne done_parsing
+    neg eax                 ; Negate if negative
+    
+done_parsing:
+    ret
+StringToDecimal ENDP
+
+
+;--------------------------------------------------------------------------------
+; WriteDecimalNumber: Displays an integer as a decimal number
+; Receives: EAX = integer value representing decimal number 
+; Returns: Nothing, displays the number with decimal point
+;--------------------------------------------------------------------------------
+WriteDecimalNumber PROC USES eax ebx ecx edx
+    
+    ; Save original number
+    mov tempNum, eax
+    
+    ; Get whole part (divide by 100)
+    mov edx, 0
+    mov ebx, 100
+    div ebx         ; EAX = whole part, EDX = remainder (decimal part)
+    
+    ; Display whole part
+    call WriteDec
+    
+    ; Display decimal point
+    mov al, '.'
+    call WriteChar
+    
+    ; Display decimal part with leading zero if needed
+    mov eax, edx    ; Get remainder (decimal part)
+    
+    ; Check if we need a leading zero
+    cmp eax, 10
+    jge write_decimal_part
+    
+    ; Add leading zero
+    push eax
+    mov al, '0'
+    call WriteChar
+    pop eax
+    
+write_decimal_part:
+    call WriteDec
+    
+    ret
+WriteDecimalNumber ENDP
 
 ;--------------------------------------------------------------------------------
 ; ParseCSVField PROC

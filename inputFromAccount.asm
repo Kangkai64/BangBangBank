@@ -23,7 +23,7 @@ fieldIndex         DWORD 0
 currentLineStart   DWORD 0
 foundAccount       BYTE 0
 userCustomerID     BYTE 32 DUP(?)
-SavingsStr         BYTE "Savings", 0
+;SavingsStr         BYTE "Savings", 0
 
 .code
 inputFromAccount PROC,
@@ -138,8 +138,8 @@ searchAccountLoop:
         call ParseCSVField  ;Parse account_type
 
         ;Check if account type is Savings
-        INVOKE Str_compare, ADDR tempBuffer, ADDR SavingsStr
-        .IF ZERO?
+        ;INVOKE Str_compare, ADDR tempBuffer, ADDR SavingsStr
+        ;.IF ZERO?
             ; Found the account! Set flag
             mov foundAccount, 1
         
@@ -151,7 +151,7 @@ searchAccountLoop:
         
             jmp readAccountFileExit
         .ENDIF
-    .ENDIF
+    ;.ENDIF
     
     
     ; CustomerID didn't match, skip to next line
