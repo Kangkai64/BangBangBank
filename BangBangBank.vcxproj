@@ -22,9 +22,12 @@
     <MASM Include="aboutUs.asm" />
     <MASM Include="calculation.asm" />
     <MASM Include="changeCredentials.asm" />
+    <MASM Include="checkInterest.asm" />
     <MASM Include="displayCustomerMenu.asm" />
     <MASM Include="displayMainMenu.asm" />
     <MASM Include="encrypt.asm" />
+    <MASM Include="generateOTP.asm" />
+    <MASM Include="generateTransactionId.asm" />
     <MASM Include="helper.asm" />
     <MASM Include="inputFromAccount.asm" />
     <MASM Include="inputFromTransaction.asm" />
@@ -46,6 +49,7 @@
     <MASM Include="updateUserFile.asm" />
     <MASM Include="validateLoginTime.asm" />
     <MASM Include="validateRecipientAcc.asm" />
+    <MASM Include="verifyOTP.asm" />
     <MASM Include="Wait_Msg.asm" />
     <MASM Include="inputFromFile.asm" />
     <MASM Include="promptForUsername.asm" />

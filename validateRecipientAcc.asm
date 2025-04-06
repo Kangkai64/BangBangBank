@@ -23,7 +23,7 @@ fieldIndex         DWORD 0
 currentLineStart   DWORD 0
 foundAccount       BYTE 0
 recipientAccNo    BYTE 32 DUP(?)
-SavingsStr         BYTE "Savings", 0
+recipientName       BYTE 64 DUP(?)
 
 .code
 validateRecipientAcc PROC,
@@ -119,25 +119,9 @@ searchAccountLoop:
     ; Compare with input account_number
     INVOKE Str_compare, ADDR tempBuffer, ADDR recipientAccNo
     
-    ; If match found, check account type
+    ; If match found, parse data
     .IF ZERO?
-        ;skip to account type field
-        mov edi, OFFSET tempBuffer
-        call ParseCSVField  ;Skip customer_id
-        call ParseCSVField  ;Skip full_name
-        call ParseCSVField  ;Skip phone_number
-        call ParseCSVField  ;Skip email
-        call ParseCSVField  ;Skip account_balance
-        call ParseCSVField  ;Skip opening_date
-        call ParseCSVField  ;Skip transaction_limit
-        call ParseCSVField  ;Skip branch_name
-        call ParseCSVField  ;Skip branch_address
-        call ParseCSVField  ;Parse account_type
-
-        ;Check if account type is Savings
-        INVOKE Str_compare, ADDR tempBuffer, ADDR SavingsStr
-        .IF ZERO?
-            ; Found the account! Set flag
+         ; Found the account! Set flag
             mov foundAccount, 1
         
             ; Return to the start of this line
@@ -145,11 +129,14 @@ searchAccountLoop:
         
             ; Parse all fields for this account
             INVOKE parseUserAccount, account
+
+            ; esi still points to your account struct
+            mov esi, [account]
+            add esi, OFFSET userAccount.full_name
+            INVOKE Str_copy, esi, ADDR recipientName
         
             jmp readAccountFileExit
-        .ENDIF
     .ENDIF
-    
     
     ; CustomerID didn't match, skip to next line
 skipToNextLine:
