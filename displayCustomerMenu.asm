@@ -33,7 +33,7 @@ displayCustomerMenu PROC,
 	user: PTR userCredential
 
 	call Clrscr
-
+	start:
 	; Get current time and format it in DD/MM/YYYY HH:MM:SS format
 	INVOKE GetLocalTime, ADDR currentTime
 	INVOKE formatSystemTime, ADDR currentTime, ADDR timeOutputBuffer
@@ -85,7 +85,7 @@ displayCustomerMenu PROC,
 	.ELSEIF al == 2
 		;call aboutUs
 	.ELSEIF al == 3
-		INVOKE printMonthlyStatement, ADDR account
+        INVOKE printMonthlyStatement, ADDR account
 	.ELSEIF al == 4
 		call changeCredentials
 	.ELSEIF al == 5

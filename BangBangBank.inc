@@ -230,4 +230,7 @@ printMonthlyStatement PROTO,
 
 MSnote PROTO
 
+calculateTotal PROTO,
+	transaction: PTR userTransaction
+
 .LIST

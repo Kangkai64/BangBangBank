@@ -8,7 +8,8 @@ INCLUDE BangBangBank.inc
 ;--------------------------------------------------------------------------------
 .data
 transactionFileName     BYTE "Users\transactionLog.txt", 0
-
+totalCredit         DWORD 0              
+totalDebit          DWORD 0 
 ; Handles and buffers
 fileHandle         DWORD ?
 readBuffer         BYTE 20480 DUP(?)  ; Larger buffer for multi-transaction file
@@ -133,13 +134,13 @@ searchTransactionLoop:
         .IF ZERO?
             ; Found the transaction! Set flag
             mov foundTransaction, 1
-        
+            
             ; Return to the start of this line
             mov esi, currentLineStart
         
             ; Parse all fields for this transaction
             INVOKE parseUserTransaction, transaction
-        
+            INVOKE calculateTotal, transaction
             INVOKE printUserTransaction, transaction
             jmp searchTransactionLoop
         .ENDIF
