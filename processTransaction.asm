@@ -26,10 +26,13 @@ recipientNameMsg BYTE "Recipient Name: ", 0
 transTypeMsg BYTE "Transaction Type: Transaction", 0
 transactionSuccessful BYTE "Transaction Successful!",0
 transactionCancel BYTE "Transaction Cancelled!",0
-inputRecipientAccNo BYTE 32 DUP(?)
-inputTransactionAmount BYTE 32 DUP(?)
-recipientName BYTE 32 DUP(?)
-newTransactionId BYTE 32 DUP(?)
+transactionVerifiedMsg BYTE "OTP verification successful! Transaction completed.", NEWLINE, 0
+transactionFailedMsg BYTE "OTP verification failed! Transaction cancelled.", NEWLINE, 0
+resendOTPMsg BYTE "OTP will resend to the same file.", 0
+inputRecipientAccNo BYTE 255 DUP(?)
+inputTransactionAmount BYTE 255 DUP(?)
+recipientName BYTE 255 DUP(?)
+newTransactionId BYTE 255 DUP(?)
 .code
 processTransaction PROC,
     account: PTR userAccount
@@ -79,7 +82,7 @@ confirmTransaction:
     call Clrscr
     INVOKE printString, ADDR transactionDetailTitle
 
-    ; Print transaction id
+        ; Print transaction id
     INVOKE printString, ADDR transactionIdMsg
     INVOKE printString, ADDR newTransactionId
     Call Crlf
@@ -119,19 +122,37 @@ confirmTransaction:
     .IF CARRY? ; Return if the input is invalid
         jmp confirmTransaction
     .ELSEIF al == 1
-        Call Clrscr
-        INVOKE generateOTP, account
-        INVOKE printString, ADDR transactionSuccessful
-        call Wait_Msg
-        jmp done
+        jmp validateOTP
     .ELSEIF al == 2
         INVOKE printString, ADDR transactionCancel
         call Wait_Msg
         jmp done
     .ENDIF
 
-    done:
-        STC
-        ret
+validateOTP:
+    Call Clrscr
+    INVOKE generateOTP, account    ; This puts OTP in eax
+    push eax                       ; Save the OTP
+
+    ; Verify OTP with timeout and retry limit
+    INVOKE verifyOTP, eax
+        
+    .IF eax == 1   ; If OTP verification was successful
+        INVOKE printString, ADDR transactionVerifiedMsg
+        INVOKE printString, ADDR transactionSuccessful
+        call Wait_Msg
+    .ELSEIF eax == 2 ; IF OTP was expired, resend otp
+        INVOKE printString, ADDR resendOTPMsg
+        call Wait_Msg
+        jmp validateOTP
+    .ELSE              ; If OTP verification failed
+        INVOKE printString, ADDR transactionFailedMsg
+        call Wait_Msg
+    .ENDIF
+    jmp done
+
+done:
+    STC
+    ret
 processTransaction ENDP
 END

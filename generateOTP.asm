@@ -13,10 +13,10 @@ otpFilePath           BYTE 256 DUP(0)  ; Increased buffer size for safety
 ; OTP variables
 otpBuffer             BYTE 16 DUP(0)   ; Initialize with zeros for safety
 otpPrefix             BYTE "OTP-", 0
-otpMessage            BYTE "Your OTP has been generated: ", 0
+otpMessage            BYTE "Your OTP is generated in the Bang Bang Bank/OTP/T001.txt.", NEWLINE, 
+                            "Please do not share it with others. Expiring in 60 seconds.", 0
 createDirError        BYTE "Error creating OTP directory", 0
 createFileError       BYTE "Error creating OTP file", 0
-filePathDebug         BYTE "Creating file: ", 0
 bytesWritten          DWORD ?
 tempBuffer            BYTE 16 DUP(0)   ; Initialize with zeros
 
@@ -145,11 +145,6 @@ copyCustomerID:
     pop esi
     pop edi
 
-    ; Debug - print filepath
-    INVOKE printString, ADDR filePathDebug
-    INVOKE printString, ADDR otpFilePath
-    call Crlf
-
     ; Write OTP to file
     INVOKE CreateFile, 
            ADDR otpFilePath,              ; lpFileName
@@ -192,7 +187,7 @@ otpFileOpen:
 
     ; Print success message
     INVOKE printString, ADDR otpMessage
-    INVOKE printString, ADDR otpBuffer
+    call Crlf
     call Crlf
 
 generateOTPExit:

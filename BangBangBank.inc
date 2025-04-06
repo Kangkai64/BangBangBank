@@ -222,6 +222,9 @@ generateOTP PROTO,
 generateTransactionID PROTO,
     transIDBuffer: PTR BYTE
 
+verifyOTP PROTO,
+    generatedOTP: PTR BYTE 
+
 ;-------------------------
 ; colorMode values
 ;-------------------------

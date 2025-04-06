@@ -48,6 +48,7 @@
     <MASM Include="updateUserFile.asm" />
     <MASM Include="validateLoginTime.asm" />
     <MASM Include="validateRecipientAcc.asm" />
+    <MASM Include="verifyOTP.asm" />
     <MASM Include="Wait_Msg.asm" />
     <MASM Include="inputFromFile.asm" />
     <MASM Include="promptForUsername.asm" />
