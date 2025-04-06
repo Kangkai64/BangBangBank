@@ -216,6 +216,11 @@ printUserAccount PROTO,
 printUserTransaction PROTO, 
     transaction: PTR userTransaction
 
+generateOTP PROTO,
+    account: PTR userAccount
+
+generateTransactionID PROTO,
+    transIDBuffer: PTR BYTE
 
 ;-------------------------
 ; colorMode values

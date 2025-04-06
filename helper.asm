@@ -528,6 +528,9 @@ StringToInt ENDP
 ;--------------------------------------------------------------------------------
 IntToString PROC USES eax ebx ecx edx
     
+    ; Store original number
+    mov ecx, eax            ; Save original number
+    
     ; Check for negative number
     test eax, eax
     jns format_positive     ; Jump if not negative
@@ -539,63 +542,50 @@ IntToString PROC USES eax ebx ecx edx
     
 format_positive:
     ; Determine number of digits needed
-    mov ecx, eax            ; Save original number
     mov ebx, 10             ; Base 10
     
-    ; First, count digits by repeatedly dividing by 10
-    mov edx, 1              ; Start with at least 1 digit
-    push edx                ; Save digit count on stack
+    ; Handle zero as special case
+    test ecx, ecx
+    jnz not_zero
     
-    test eax, eax
-    jz single_digit         ; Special case for 0
+    ; Special case for 0
+    mov BYTE PTR [edi], '0'
+    inc edi
+    mov BYTE PTR [edi], 0  ; Null-terminate
+    jmp conversion_done
+    
+not_zero:
+    ; Count digits
+    mov eax, ecx          ; Working with original number
+    xor edx, edx          ; Track digit count
     
 count_digits:
-    cmp eax, 10
-    jb done_counting
+    inc edx               ; Increment digit count
     xor edx, edx
-    div ebx                 ; EAX = quotient, EDX = remainder
-    inc DWORD PTR [esp]     ; Increment digit count on stack
+    div ebx               ; EAX = quotient, EDX = remainder
     test eax, eax
     jnz count_digits
     
-done_counting:
-    pop ecx                 ; ECX = digit count
-    mov eax, ecx            ; Restore original number
+    ; Now we know how many digits
+    mov edx, ecx          ; Get back original number
+    add edi, edx          ; Move to end position
+    mov BYTE PTR [edi], 0 ; Null-terminate
+    dec edi               ; Move to last digit position
     
-    ; Now generate digits from right to left
-    add edi, ecx            ; Move to end position + 1
-    mov BYTE PTR [edi], 0   ; Null-terminate the string
-    dec edi                 ; Move to last digit position
-    
-    ; Handle 0 separately
-    test eax, eax
-    jnz digit_conversion
-    mov BYTE PTR [edi], '0'
-    inc edi
-    jmp conversion_done
-    
-digit_conversion:
-    ; Convert each digit, from right to left
-    mov ecx, eax            ; Save number
+    ; Convert digits from right to left
+    mov eax, ecx          ; Restore original number
     
 gen_digits:
     xor edx, edx
-    div ebx                 ; EAX = quotient, EDX = remainder
-    add dl, '0'             ; Convert to ASCII
-    mov [edi], dl           ; Store digit
-    dec edi                 ; Move left
+    div ebx               ; EAX = quotient, EDX = remainder
+    add dl, '0'           ; Convert to ASCII
+    mov [edi], dl         ; Store digit
+    dec edi               ; Move left
     test eax, eax
-    jnz gen_digits          ; Continue if more digits
+    jnz gen_digits        ; Continue if more digits
     
 conversion_done:
     ret
-
-single_digit:
-    ; Handle single digit case (0-9)
-    add al, '0'             ; Convert to ASCII
-    mov [edi], al           ; Store the character
-    inc edi                 ; Move pointer
-    jmp conversion_done
     
 IntToString ENDP
 
