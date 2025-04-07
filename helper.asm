@@ -986,14 +986,17 @@ myStr_trim ENDP
 ; Receives: EAX = DWORD value to convert
 ; Returns: tempNumStr contains the string representation
 ;          digitCount contains the number of digits
-; Affects: EAX, EBX, ECX, EDX, ESI, EDI
 ;--------------------------------------------------------------------------------
 DwordToStr PROC USES ebx esi edi,
-    dwordVal: DWORD
+    dwordVal: DWORD,
+    stringVal: PTR BYTE
+
+    LOCAL tempDigits[10]:BYTE
+    LOCAL digitCount:DWORD
 
     ; Clear the buffer
-    mov edi, OFFSET tempNumStr
-    mov ecx, SIZEOF tempNumStr
+    mov edi, stringVal
+    mov ecx, SIZEOF stringVal
     mov al, 0
     rep stosb
     
@@ -1005,14 +1008,14 @@ DwordToStr PROC USES ebx esi edi,
     cmp eax, 0
     jne notZero
     
-    mov BYTE PTR [OFFSET tempNumStr], '0'
-    mov BYTE PTR [OFFSET tempNumStr + 1], 0
+    mov BYTE PTR [stringVal], '0'
+    mov BYTE PTR [stringVal + 1], 0
     mov digitCount, 1
     jmp DwordToStrDone
     
 notZero:
     ; Convert number to digits in reverse order
-    mov edi, OFFSET tempDigits
+    lea edi, tempDigits
     mov ebx, 10     ; Divisor
     
 extractDigitLoop:
@@ -1032,13 +1035,13 @@ extractDigitLoop:
     jnz extractDigitLoop
     
     ; Reverse the digits to get correct order
-    mov esi, OFFSET tempDigits        ; Source (reversed digits)
+    lea esi, tempDigits        ; Source (reversed digits)
     add esi, digitCount
-    dec esi                           ; Point to last digit
+    dec esi                    ; Point to last digit
     
-    mov edi, OFFSET tempNumStr        ; Destination
+    mov edi, stringVal         ; Destination
     
-    mov ecx, digitCount               ; Counter
+    mov ecx, digitCount        ; Counter
     
 reverseLoop:
     mov al, [esi]   ; Get digit from end
@@ -1049,6 +1052,9 @@ reverseLoop:
     
     ; Null terminate
     mov BYTE PTR [edi], 0
+
+    ; Return the digitCount in EAX
+    mov eax, digitCount
     
 DwordToStrDone:
     ret

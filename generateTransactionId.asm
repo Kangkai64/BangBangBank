@@ -19,8 +19,6 @@ tempTransID           BYTE 32 DUP(?)
 highestTransNum       DWORD 0
 newTransNum           DWORD 0
 tempNumStr            BYTE 16 DUP(?)
-currentDigit          DWORD ?
-tempDigits            BYTE 10 DUP(?)
 digitCount            DWORD ?
 
 .code
@@ -84,7 +82,7 @@ skipHeaderLoop:
     cmp al, 0           ; End of buffer?
     je processTransIDs  ; File is empty or corrupted
     cmp al, 10          ; LF - new line?
-    je headerSkipped
+    je processTransIDs
     cmp al, 13          ; CR?
     je skipCR
     inc esi
@@ -95,9 +93,6 @@ skipCR:
     cmp BYTE PTR [esi], 10  ; Check for LF
     jne skipHeaderLoop
     inc esi             ; Skip LF
-    
-headerSkipped:
-    inc esi             ; Move to first character of data line
 
 processTransIDs:
     
@@ -210,7 +205,8 @@ doneProcessingIDs:
     INVOKE Str_copy, ADDR transIDPrefix, transIDBuffer
     
     ; Convert number to string with custom routine
-    INVOKE DwordToStr, newTransNum    ; Convert newTransNum to string (in tempNumStr)
+    INVOKE DwordToStr, newTransNum, ADDR tempNumStr    ; Convert newTransNum to string (in tempNumStr)
+    mov digitCount, eax
     
     ; Pad with zeros if needed (to maintain 4 digits)
     mov ebx, 4          ; We want 4 digits total

@@ -14,7 +14,7 @@ loginDesign BYTE "Bang Bang Bank Login", NEWLINE,
             "User Login", NEWLINE,
             "==============================", NEWLINE, 0
 promptPasswordMsg BYTE "Please enter your password: ", 0
-emptyUsernameMsg  BYTE NEWLINE, "Username cannot be empty.", 0
+emptyUsernameMsg  BYTE NEWLINE, "Username and password cannot be empty.", 0
 loginAttemptLimitReachedMsg BYTE NEWLINE, "You have reached your login attempt limit. Please try again at ", 0
 loginSuccessMsg BYTE "Login successful! Welcome to Bang Bang Bank.", NEWLINE, 0
 loginFailMsg BYTE NEWLINE, "Login failed. Incorrect username or password.", NEWLINE, 0
@@ -39,7 +39,11 @@ loginPrompt:
 
     ; Check if username is empty
     INVOKE Str_length, ADDR inputUsername
-    .IF eax == 0
+    mov eax, ebx
+
+    ; Check if password is empty
+    INVOKE Str_length, ADDR inputPassword
+    .IF eax == 0 || ebx == 0
         INVOKE printString, ADDR emptyUsernameMsg
         call Wait_Msg
         call Clrscr

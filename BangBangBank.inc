@@ -127,7 +127,8 @@ myStr_trim PROTO,
     char: BYTE
 
 DwordToStr PROTO,
-    dwordVal: DWORD
+    dwordVal: DWORD,
+    stringVal: PTR BYTE
 
 ;-------------------------
 ; Procedure Prototype
