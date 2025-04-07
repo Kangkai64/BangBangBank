@@ -18,7 +18,7 @@ transactionDetailTitle BYTE "Transaction details", NEWLINE,
                             "==============================", NEWLINE,0
 recipientAccNotFound BYTE "Recipient account not found...", NEWLINE,0
 selfAccountErrorMsg BYTE "You cannot enter your own account number as recipient.", NEWLINE, 0
-amount BYTE "Amount : RM ",0
+amountMsg BYTE "Amount : RM ",0
 confirmMsg BYTE "Press 1 to confirm and press 2 to cancel", NEWLINE,0
 transactionIdMsg BYTE "Transaction ID: ", 0
 recipientAccMsg BYTE "Account No: ",0
@@ -102,7 +102,7 @@ confirmTransaction:
     Call Crlf
   
     ; Print amount
-    INVOKE printString, ADDR amount
+    INVOKE printString, ADDR amountMsg
     ; Convert numeric amount back to string for printing
     ;mov eax, ebx    ; Move number to convert into eax
     ;lea edi, inputTransactionAmount  ; Point to destination buffer

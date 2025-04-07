@@ -12,6 +12,7 @@ INCLUDE BangBangBank.inc
     invalidInputMsg BYTE "Invalid amount. Please enter a positive number.", 13, 10, 0
     overflowMsg BYTE "Amount too large. Maximum allowed is 999,999,999.", 13, 10, 0
     notSufficientBalance BYTE "Not sufficient balance... ", NEWLINE, 0
+    exceedTransactionLimit BYTE "Invalid amount! Exceeded transaction limit...", NEWLINE, 0
 
 .code
 promptForTransactionAmount PROC,
@@ -80,6 +81,19 @@ validate_loop:
         jmp input_retry
     .ENDIF
 
+    ;check whether exceed transaction limit
+    ; Convert transaction limit to numeric value first
+    mov esi, [account]
+    lea edi, [esi + OFFSET userAccount.transaction_limit]
+    INVOKE StringToInt, edi
+    mov ecx, eax      ; Store transaction limit in ecx
+
+    ; Compare transaction amount with transaction limit
+    .IF edx > ecx
+        INVOKE printString, ADDR exceedTransactionLimit
+        jmp input_retry
+    .ENDIF
+
     ;check whether enough balance
     ; Convert account_balance to numeric value first
     mov esi, [account]
@@ -90,9 +104,7 @@ validate_loop:
     ; Compare transaction amount with account balance
     .IF edx > ecx
         INVOKE printString, ADDR notSufficientBalance
-        call Wait_Msg
-        STC
-        jmp done
+        jmp input_retry
     .ENDIF
 
     ; Convert validated number back to string
