@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <MASM Include="aboutUs.asm" />
+    <MASM Include="calculation.asm" />
     <MASM Include="changeCredentials.asm" />
     <MASM Include="checkInterest.asm" />
     <MASM Include="displayCustomerMenu.asm" />

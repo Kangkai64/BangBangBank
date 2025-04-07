@@ -33,6 +33,8 @@
     <MASM Include="generateOTP.asm" />
     <MASM Include="generateTransactionId.asm" />
     <MASM Include="checkInterest.asm" />
+    <MASM Include="changeCredentials.asm" />
+    <MASM Include="calculation.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />

@@ -9,59 +9,41 @@ INCLUDE BangBangBank.inc
 ;----------------------------------------------------------------------
 .data
 ; Labels for each transaction field
-transactionIdLabel    BYTE "Transaction ID: ", 0
-customerIdLabel       BYTE "Customer ID: ", 0
-transactionTypeLabel  BYTE "Transaction Type: ", 0
-amountLabel           BYTE "Amount: RM ", 0
-balanceLabel          BYTE "Balance: RM ", 0
-transactiondetailLabel BYTE "Transaction Detail: ", 0
-dateLabel             BYTE "Date: ", 0
-timeLabel             BYTE "Time: ", 0
+break       BYTE "   |   "
 
 .code
 printUserTransaction PROC, 
-    transaction: PTR userTransaction,
-    ;printMode: DWORD ; Decide print what info
-
-    pushad
+    transaction: PTR userTransaction
     
-    INVOKE printString, ADDR dateLabel
+    pushad
+    INVOKE printString, OFFSET break
+    ; Print date
     mov esi, transaction
     add esi, OFFSET userTransaction.date
     INVOKE printString, esi
-
-    INVOKE printString, ADDR transactionTypeLabel
-    mov esi, transaction
-    add esi, OFFSET userTransaction.transaction_type
-    INVOKE printString, esi
     
-    INVOKE printString, ADDR transactionIdLabel
-    mov esi, transaction
-    add esi, OFFSET userTransaction.transaction_id
-    INVOKE printString, esi
-
-    INVOKE printString, ADDR balanceLabel
-    mov esi, transaction
-    add esi, OFFSET userTransaction.balance
-    INVOKE printString, esi
-
-    INVOKE printString, ADDR transactiondetailLabel
+    INVOKE printString, OFFSET break
+    ; Print transaction detail
     mov esi, transaction
     add esi, OFFSET userTransaction.transaction_detail
     INVOKE printString, esi
-    call Crlf
-
-    INVOKE printString, ADDR amountLabel
+    
+    INVOKE printString, OFFSET break
+    ; Print balance
+    mov esi, transaction
+    add esi, OFFSET userTransaction.balance
+    INVOKE printString, esi
+    
+    INVOKE printString, OFFSET break
+    ; Print amount (with proper sign based on transaction type)
     mov esi, transaction
     add esi, OFFSET userTransaction.amount
     INVOKE printString, esi
-
-    INVOKE printString, ADDR customerIdLabel
-    mov esi, transaction
-    add esi, OFFSET userTransaction.customer_id
-    INVOKE printString, esi
+    INVOKE printString, OFFSET break
+    
+    ; Move to next line for next transaction
     call Crlf
-
+    
 done:    
     popad
     ret

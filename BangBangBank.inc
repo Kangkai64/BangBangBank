@@ -260,9 +260,11 @@ printMonthlyStatement PROTO,
 
 MSnote PROTO
 
+calculateTotal PROTO,
+	transaction: PTR userTransaction
+
 addDecimal PROTO,
     decimal_one: PTR BYTE,
     decimal_two: PTR BYTE,
     decimal_position: BYTE
-
 .LIST

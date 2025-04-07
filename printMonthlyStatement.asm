@@ -6,6 +6,7 @@ INCLUDE BangBangBank.inc
 ; Last update: 2/4/2025
 ;-----------------------------------------------------------
 .data
+break 		    BYTE "    |",0
 bankHeader      BYTE "Bang Bang Bank", 0
 bankAddress     BYTE "10th floor, Tower A, Dataran Bang Bang, 1, Jalan Hijau, 59000, Kuala Lumpur", 0
 pageLabel       BYTE "PAGE", 0
@@ -16,14 +17,9 @@ accountLabel    BYTE "ACCOUNT NUMBER", 0
 pidmNotice      BYTE "PROTECTED BY PIDM UP TO RM250,000 FOR EACH DEPOSITOR", 0
 accountType     BYTE "SAVINGS ACCOUNT", 0
 transHeader     BYTE "ACCOUNT TRANSACTIONS", 0
-columnHeader1   BYTE "ENTRY DATE", 0
-columnHeader2   BYTE "TRANSACTION DESCRIPTION", 0
-columnHeader3   BYTE "TRANSACTION", 0
-columnHeader4   BYTE "STATEMENT BALANCE", 0
-amountLabel     BYTE "AMOUNT", 0
-beginBalance    BYTE "BEGINNING BALANCE", 0
-doubleLine      BYTE "===========================================================================", 0
-singleLine      BYTE "---------------------------------------------------------------------------", 0
+columnHeader    BYTE "     ENTRY DATE     |     TRANSACTION DESCRIPTION     |     STATEMENT BALANCE     |     AMOUNT     ", 0
+doubleLine      BYTE "====================================================================================================", 0
+singleLine      BYTE "----------------------------------------------------------------------------------------------------", 0
 
 
 ; Footer data
@@ -143,90 +139,57 @@ printMonthlyStatement PROC,
     mov dl, 5
     mov dh, 14
     call Gotoxy
-    INVOKE printString, ADDR columnHeader1
-    
-    mov dl, 30
-    mov dh, 14
-    call Gotoxy
-    INVOKE printString, ADDR columnHeader2
-    
-    mov dl, 55
-    mov dh, 14
-    call Gotoxy
-    INVOKE printString, ADDR columnHeader3
-    
-    mov dl, 75
-    mov dh, 14
-    call Gotoxy
-    INVOKE printString, ADDR columnHeader4
-    
-    ; Transaction Amount subheader
-    mov dl, 55
-    mov dh, 15
-    call Gotoxy
-    INVOKE printString, ADDR amountLabel
+    INVOKE printString, ADDR columnHeader
     
     ; Single line
     mov dl, 5
     mov dh, 16
     call Gotoxy
     INVOKE printString, ADDR singleLine
-    
-    ; Beginning balance
-    mov dl, 30
-    mov dh, 17
-    call Gotoxy
-    INVOKE printString, ADDR beginBalance
-    
-    ; Summary section
-    mov dl, 20
-    mov dh, 30
-    call Gotoxy
-    INVOKE printString, ADDR endingBalance
-    
-    ;mov dl, 65
-    ;mov dh, 30
-    ;call Gotoxy
-    ;INVOKE printString, ADDR endBalValue
 
     ; Copy out the customer_id and store it into user account structure
      mov esi, [account]
      add esi, OFFSET userAccount.customer_id
      INVOKE Str_copy, esi, ADDR transaction.customer_id
 
+
+     ; Copy out the customer_id and store it into user account structure
+     mov esi, [account]
+     add esi, OFFSET userAccount.customer_id
+     INVOKE Str_copy, esi, ADDR transaction.customer_id
+
     ; Transaction details
+    call CRLF
+    INVOKE calculateTotal, ADDR transaction
+    call CRLF
+
+    ; Transaction details
+    call CRLF
     INVOKE inputFromTransaction, ADDR transaction
-    
-    mov dl, 20
-    mov dh, 31
+    call CRLF
+
+    ; Single line
+    mov dl, 5
+    mov dh, 36
     call Gotoxy
+    INVOKE printString, ADDR singleLine
+
+    INVOKE printString, ADDR break
     INVOKE printString, ADDR totalCredit
+    call CRLF
     
-    ;mov dl, 65
-    ;mov dh, 31
-    ;call Gotoxy
-    ;INVOKE printString, ADDR creditValue
-    
-    mov dl, 20
-    mov dh, 32
-    call Gotoxy
+    INVOKE printString, ADDR break
     INVOKE printString, ADDR totalDebit
+    call CRLF
     
-    ;mov dl, 65
-    ;mov dh, 32
-    ;call Gotoxy
-    ;INVOKE printString, ADDR debitValue
-    
-    mov dl, 20
-    mov dh, 33
-    call Gotoxy
+    INVOKE printString, ADDR break
     INVOKE printString, ADDR avgExpenses
+    call CRLF
     
-    mov dl, 20
-    mov dh, 34
-    call Gotoxy
+    INVOKE printString, ADDR break
     INVOKE printString, ADDR variance
-    
+    call CRLF
+
     mov dl, 20
     mov dh, 35
     call Gotoxy
@@ -238,6 +201,8 @@ printMonthlyStatement PROC,
     call Gotoxy
     INVOKE printString, ADDR singleLine
 
+    call CRLF
+    Call MSnote
     ; Wait for user input
     call ReadChar
     STC ; Don't logout the user
@@ -297,6 +262,7 @@ mov dl, 5
     call Gotoxy
     INVOKE printString, ADDR menuContinue
 
+    popad
     ret
 MSnote ENDP
 END
