@@ -5,7 +5,7 @@ INCLUDE BangBangBank.INC
 ; If the file is empty or cannot be opened, it will start from T0001
 ; Receives: Pointer to buffer where the new transaction ID will be stored
 ; Returns: Nothing (buffer is filled with the new transaction ID)
-; Last update: 01/04/2025
+; Last update: 07/04/2025
 ;--------------------------------------------------------------------------------
 .data
 transFileName         BYTE "Users\transactionLog.txt", 0
@@ -20,6 +20,7 @@ highestTransNum       DWORD 0
 newTransNum           DWORD 0
 tempNumStr            BYTE 16 DUP(?)
 digitCount            DWORD ?
+commaChar             BYTE ",", 0
 
 .code
 generateTransactionID PROC,
@@ -30,12 +31,12 @@ generateTransactionID PROC,
     ; Open the transaction file
     INVOKE CreateFile, 
         ADDR transFileName,          ; lpFileName
-        GENERIC_READ,                   ; dwDesiredAccess
-        FILE_SHARE_READ,                ; dwShareMode
-        NULL,                           ; lpSecurityAttributes
-        OPEN_EXISTING,                  ; dwCreationDisposition
-        FILE_ATTRIBUTE_NORMAL,          ; dwFlagsAndAttributes
-        NULL                            ; hTemplateFile
+        GENERIC_READ,                ; dwDesiredAccess
+        FILE_SHARE_READ,             ; dwShareMode
+        NULL,                        ; lpSecurityAttributes
+        OPEN_EXISTING,               ; dwCreationDisposition
+        FILE_ATTRIBUTE_NORMAL,       ; dwFlagsAndAttributes
+        NULL                         ; hTemplateFile
         
     mov fileHandle, eax
     
@@ -50,11 +51,11 @@ generateTransactionID PROC,
 fileOpenSuccess:
     ; Read file content into buffer
     INVOKE ReadFile, 
-        fileHandle,                 ; hFile
-        ADDR readBuffer,            ; lpBuffer
-        SIZEOF readBuffer - 1,      ; nNumberOfBytesToRead
-        ADDR bytesRead,             ; lpNumberOfBytesRead
-        NULL                           ; lpOverlapped
+        fileHandle,                  ; hFile
+        ADDR readBuffer,             ; lpBuffer
+        SIZEOF readBuffer - 1,       ; nNumberOfBytesToRead
+        ADDR bytesRead,              ; lpNumberOfBytesRead
+        NULL                         ; lpOverlapped
     
     ; Check if read was successful
     .IF eax == 0
@@ -74,138 +75,134 @@ fileOpenSuccess:
     ; Initialize highest transaction number
     mov highestTransNum, 0
     
-    ; Skip the header line
+    ; Point to start of file content
     mov esi, OFFSET readBuffer
     
-skipHeaderLoop:
+    ; Skip the header line (first line of the CSV file)
+skipHeaderLine:
     mov al, [esi]
     cmp al, 0           ; End of buffer?
-    je processTransIDs  ; File is empty or corrupted
+    je processComplete  ; File is empty
     cmp al, 10          ; LF - new line?
-    je processTransIDs
+    je foundHeaderEnd
     cmp al, 13          ; CR?
-    je skipCR
+    je checkCRLF
     inc esi
-    jmp skipHeaderLoop
+    jmp skipHeaderLine
     
-skipCR:
+checkCRLF:
     inc esi             ; Skip CR
-    cmp BYTE PTR [esi], 10  ; Check for LF
-    jne skipHeaderLoop
-    inc esi             ; Skip LF
-
-processTransIDs:
-    
-findNextTransIDLoop:
-    ; Check for end of buffer
     mov al, [esi]
-    cmp al, 0
-    je doneProcessingIDs
+    cmp al, 10          ; Check for LF
+    jne skipHeaderLine  ; If not LF, continue checking
     
-    ; Check for start of a new line (could be transaction_id field)
+foundHeaderEnd:
+    inc esi             ; Move past the newline character
+    
+    ; Now process each line, looking for transaction IDs
+processLines:
+    mov al, [esi]
+    cmp al, 0           ; End of buffer?
+    je processComplete
+    
+    ; Check if line starts with 'T' followed by digits (likely a transaction ID)
     cmp al, 'T'
-    jne notTransIDStart
+    jne skipToNextLine
     
-    ; Found potential transaction ID, copy it to tempTransID
+    ; Found a potential transaction ID, capture it
     mov edi, OFFSET tempTransID
-    mov ecx, 0   ; Counter for ID length
+    mov ecx, 0          ; Counter for ID length
     
-copyTransIDLoop:
+captureTransID:
     mov al, [esi]
-    cmp al, ','  ; End of field?
+    cmp al, ','         ; End of field (comma)?
     je endOfTransID
-    cmp al, 0    ; End of buffer?
+    cmp al, 0           ; End of buffer?
+    je processComplete
+    cmp al, 13          ; CR?
     je endOfTransID
-    cmp al, 13   ; CR?
-    je endOfTransID
-    cmp al, 10   ; LF?
+    cmp al, 10          ; LF?
     je endOfTransID
     
-    ; Copy character
+    ; Copy character to temp buffer
     mov [edi], al
     inc edi
     inc esi
     inc ecx
     
-    cmp ecx, 10  ; Reasonable max length for transaction ID
-    jb copyTransIDLoop
-    
-    ; ID too long, skip to next line
-    jmp skipToNextLine
+    cmp ecx, 31         ; Prevent buffer overflow
+    jge skipToNextLine
+    jmp captureTransID
     
 endOfTransID:
-    ; Null-terminate the ID
+    ; Null-terminate the captured ID
     mov BYTE PTR [edi], 0
     
-    ; Verify it's a valid transaction ID (starts with T followed by digits)
+    ; Only process if it's a valid transaction ID (starts with T followed by digits)
     mov edi, OFFSET tempTransID
     cmp BYTE PTR [edi], 'T'
     jne notValidTransID
     
-    ; Extract numeric part
-    inc edi  ; Skip the T prefix
+    ; Skip 'T' prefix
+    inc edi
     
-    ; Convert numeric string to integer using custom conversion
-    push esi                  ; Save position in main buffer
-    INVOKE StringToInt, edi   ; Call our custom conversion function (result in EAX)
+    ; Check if the rest are digits
+    push esi            ; Save current position in file buffer
     
-    ; If valid and higher than current highest, update highest
+    ; Convert numeric part to integer
+    INVOKE StringToInt, edi
+    
+    ; Compare with highest transaction number found so far
     cmp eax, highestTransNum
-    jbe notValidTransID2
+    jle notHigherTransID
+    
+    ; Found new highest transaction number
     mov highestTransNum, eax
     
-notValidTransID2:
-    pop esi         ; Restore position in main buffer
-    jmp skipToNextLine
+notHigherTransID:
+    pop esi             ; Restore position in file buffer
     
 notValidTransID:
-    ; Skip to next line or continue processing
-    jmp skipToNextLine
-    
-notTransIDStart:
-    ; Not a transaction ID start, move to next character
-    inc esi
-    jmp findNextTransIDLoop
-    
+    ; Move to next line
 skipToNextLine:
     ; Skip to the start of the next line
     mov al, [esi]
-    cmp al, 0       ; End of file?
-    je doneProcessingIDs
-    cmp al, 10      ; LF?
+    cmp al, 0           ; End of buffer?
+    je processComplete
+    cmp al, 10          ; LF?
     je nextLine
-    cmp al, 13      ; CR?
-    je skipToNextCR
+    cmp al, 13          ; CR?
+    je skipCR
     inc esi
     jmp skipToNextLine
     
-skipToNextCR:
-    inc esi         ; Skip CR
+skipCR:
+    inc esi             ; Skip CR
     cmp BYTE PTR [esi], 10  ; Check for LF
     jne skipToNextLine
-    inc esi         ; Skip LF
+    inc esi             ; Skip LF
+    jmp processLines    ; Continue from next line
     
 nextLine:
-    inc esi         ; Skip LF
-    jmp findNextTransIDLoop
+    inc esi             ; Skip LF
+    jmp processLines    ; Continue from next line
     
-doneProcessingIDs:
+processComplete:
     ; If no valid transaction IDs found, use default
     cmp highestTransNum, 0
     je useDefaultID
     
     ; Generate next transaction ID
     mov eax, highestTransNum
-    inc eax
-    add eax, 2 ; Don't know why it wouldn't read the last two value
+    inc eax             ; Increment to get next ID number
     mov newTransNum, eax
     
     ; Start creating the full transaction ID
     ; First, copy the "T" prefix
     INVOKE Str_copy, ADDR transIDPrefix, transIDBuffer
     
-    ; Convert number to string with custom routine
-    INVOKE DwordToStr, newTransNum, ADDR tempNumStr    ; Convert newTransNum to string (in tempNumStr)
+    ; Convert number to string
+    INVOKE DwordToStr, newTransNum, ADDR tempNumStr
     mov digitCount, eax
     
     ; Pad with zeros if needed (to maintain 4 digits)
