@@ -859,6 +859,11 @@ processLoop:
     mov [edi], al               ; Store second hex char
     inc edi
     
+    ; Add a space
+    mov al, ' '
+    mov [edi], al
+    inc edi
+
     ; Move to next byte
     inc esi
     inc bytesProcessed
@@ -866,6 +871,7 @@ processLoop:
     jnz processLoop
     
     ; Add null terminator
+    dec edi ; Remove extra space
     mov BYTE PTR [edi], 0
     
     ; Return number of characters written (2 per byte)
@@ -877,9 +883,9 @@ convertHexToString ENDP
 
 ;--------------------------------------------------------------------------
 ; Str_cat : Concatenates two strings
-; Receives: EDX - Pointer to destination string (null-terminated)
-;           EAX - Pointer to source string to append (null-terminated)
-; Returns : EDX - Pointer to the resulting concatenated string
+; Receives: targetString - Pointer to destination string (null-terminated)
+;           sourceString - Pointer to source string to append (null-terminated)
+; Returns : EDI - Pointer to the resulting concatenated string
 ;--------------------------------------------------------------------------
 Str_cat PROC USES esi edi,
     sourceString : PTR BYTE,
@@ -974,4 +980,192 @@ CopyString:
 trimFinish:
     ret
 myStr_trim ENDP
+
+;--------------------------------------------------------------------------------
+; DwordToStr - Converts a DWORD to a string
+; Receives: EAX = DWORD value to convert
+; Returns: tempNumStr contains the string representation
+;          digitCount contains the number of digits
+; Affects: EAX, EBX, ECX, EDX, ESI, EDI
+;--------------------------------------------------------------------------------
+DwordToStr PROC USES ebx esi edi,
+    dwordVal: DWORD
+
+    ; Clear the buffer
+    mov edi, OFFSET tempNumStr
+    mov ecx, SIZEOF tempNumStr
+    mov al, 0
+    rep stosb
+    
+    ; Reset digit count
+    mov digitCount, 0
+    
+    ; Handle special case of zero
+    mov eax, dwordVal
+    cmp eax, 0
+    jne notZero
+    
+    mov BYTE PTR [OFFSET tempNumStr], '0'
+    mov BYTE PTR [OFFSET tempNumStr + 1], 0
+    mov digitCount, 1
+    jmp DwordToStrDone
+    
+notZero:
+    ; Convert number to digits in reverse order
+    mov edi, OFFSET tempDigits
+    mov ebx, 10     ; Divisor
+    
+extractDigitLoop:
+    xor edx, edx    ; Clear high part of dividend
+    div ebx         ; EDX:EAX / 10, quotient in EAX, remainder in EDX
+    
+    ; Convert remainder to ASCII and store
+    add dl, '0'
+    mov [edi], dl
+    inc edi
+    
+    ; Increment digit count
+    inc digitCount
+    
+    ; Continue if quotient is not zero
+    test eax, eax
+    jnz extractDigitLoop
+    
+    ; Reverse the digits to get correct order
+    mov esi, OFFSET tempDigits        ; Source (reversed digits)
+    add esi, digitCount
+    dec esi                           ; Point to last digit
+    
+    mov edi, OFFSET tempNumStr        ; Destination
+    
+    mov ecx, digitCount               ; Counter
+    
+reverseLoop:
+    mov al, [esi]   ; Get digit from end
+    mov [edi], al   ; Store at beginning
+    dec esi
+    inc edi
+    loop reverseLoop
+    
+    ; Null terminate
+    mov BYTE PTR [edi], 0
+    
+DwordToStrDone:
+    ret
+
+DwordToStr ENDP
+
+;--------------------------------------------------------------------------
+; addDecimal : Adds two string decimal numbers
+; Receives: Two decimal strings without the decimal point and the decimal
+;           point position
+; Returns : EAX with the address of the formatted string
+;--------------------------------------------------------------------------
+addDecimal PROC,
+    decimal_one: PTR BYTE,    ; first decimal string
+    decimal_two: PTR BYTE,    ; second decimal string
+    decimal_position: BYTE    ; position of decimal point from right
+
+    LOCAL temp_result[32]:BYTE    ; buffer for temporary result
+    LOCAL final_result[34]:BYTE   ; buffer for final result with decimal point
+    
+    ; Get lengths of strings
+    INVOKE Str_length, decimal_one
+    mov ecx, eax                  ; length of first string in ECX
+    
+    ; Initialize buffers
+    lea edi, temp_result
+    mov al, 0
+    mov [edi + ecx + 1], al       ; null-terminate temp_result
+    
+    ; Start at the last digit position
+    mov esi, ecx
+    dec esi                       ; last character index
+    mov edi, ecx                  ; result position
+    mov bl, 0                     ; set carry value to zero
+    
+process_decimal: 
+    ; Process first decimal string
+    mov al, BYTE PTR [decimal_one + esi]
+    sub al, 30h                   ; convert from ASCII to binary
+    
+    ; Process second decimal string (handle different string lengths)
+    INVOKE Str_length, decimal_two
+    mov edx, eax                  ; length of second string
+    
+    cmp esi, edx
+    jge has_digit                 ; if within range of second string
+    mov ah, 0                     ; use 0 if beyond second string's length
+    jmp add_digits
+    
+has_digit:
+    mov ah, BYTE PTR [decimal_two + esi]
+    sub ah, 30h                   ; convert from ASCII to binary
+    
+add_digits:
+    add al, ah                    ; add digits
+    add al, bl                    ; add carry
+    mov bl, 0                     ; reset carry
+    
+    cmp al, 10                    ; check if we need to carry
+    jl no_carry
+    sub al, 10                    ; adjust digit
+    mov bl, 1                     ; set carry
+    
+no_carry:
+    add al, 30h                   ; convert back to ASCII
+    mov BYTE PTR [temp_result + edi], al  ; store in result
+    
+    dec esi                       ; move to next digit
+    dec edi
+    cmp esi, 0
+    jl done_addition              ; if we've processed all digits
+    jmp process_decimal           ; otherwise continue
+    
+done_addition:
+    ; Handle final carry if any
+    cmp bl, 0
+    je format_result
+    mov BYTE PTR [temp_result + edi], '1'
+    dec edi
+
+format_result:
+    ; Format the result with decimal point
+    INVOKE Str_length, ADDR temp_result
+    mov ecx, eax                  ; length of result
+    lea esi, temp_result
+    lea edi, final_result
+    xor edx, edx                  ; counter for characters processed
+    
+copy_loop:
+    mov al, [esi]                 ; get character from temp_result
+    mov [edi], al                 ; copy to final_result
+    inc esi
+    inc edi
+    inc edx
+    
+    ; Check if we need to insert decimal point
+    mov bl, decimal_position
+    movzx ebx, bl                 ; zero-extend to 32 bits
+    mov eax, ecx
+    sub eax, edx                  ; remaining chars
+    cmp eax, ebx                  ; if remaining chars = decimal position
+    jne continue_copy
+    
+    ; Insert decimal point
+    mov BYTE PTR [edi], '.'
+    inc edi
+    
+continue_copy:
+    cmp edx, ecx
+    jl copy_loop                  ; continue if not at end
+    
+    ; Null-terminate final result
+    mov BYTE PTR [edi], 0
+    
+    ; Push address of result to stack for return
+    lea eax, final_result
+    
+    ret
+addDecimal ENDP
 END

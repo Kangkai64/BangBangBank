@@ -82,7 +82,7 @@ confirmTransaction:
     call Clrscr
     INVOKE printString, ADDR transactionDetailTitle
 
-        ; Print transaction id
+    ; Print transaction id
     INVOKE printString, ADDR transactionIdMsg
     INVOKE printString, ADDR newTransactionId
     Call Crlf

@@ -126,6 +126,9 @@ myStr_trim PROTO,
     pString:PTR BYTE,
     char: BYTE
 
+DwordToStr PROTO,
+    dwordVal: DWORD
+
 ;-------------------------
 ; Procedure Prototype
 ;-------------------------
@@ -201,6 +204,9 @@ validatePassword PROTO,
     hashedPassword: PTR BYTE,
     encryptionKey: PTR BYTE
 
+validatePasswordComplexity PROTO, 
+    pPassword:PTR BYTE
+
 updateUserFile PROTO,
     user: PTR userCredential
 
@@ -245,11 +251,17 @@ PRINTMODE_BALANCE           EQU 3
 
 switchAccount PROTO
 
-changeCredentials PROTO
+changeCredentials PROTO,
+    user: PTR userCredential
 
 printMonthlyStatement PROTO,
 	account: PTR userAccount
 
 MSnote PROTO
+
+addDecimal PROTO,
+    decimal_one: PTR BYTE,
+    decimal_two: PTR BYTE,
+    decimal_position: BYTE
 
 .LIST

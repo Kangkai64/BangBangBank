@@ -27,6 +27,7 @@ customerMenuChoice BYTE NEWLINE,
 					"9. Logout", NEWLINE, NEWLINE, 0
 
 account userAccount <>
+interestFlag BYTE 0
 
 .code
 displayCustomerMenu PROC,
@@ -63,8 +64,13 @@ displayCustomerMenu PROC,
 	; Read user account from userAccount.txt
 	INVOKE inputFromAccount, ADDR account
 
-	;Check apply interest or not
-	INVOKE checkInterest, ADDR account
+	; Check interest only for one time
+	.IF interestFlag == 0
+		INVOKE checkInterest, ADDR account
+		mov eax, 1
+		mov DWORD PTR interestFlag, eax
+	.ENDIF
+	
 
 	; Display the main menu
 	INVOKE printString, ADDR dateHeader
@@ -86,12 +92,14 @@ displayCustomerMenu PROC,
 	.ELSEIF al == 1
 		INVOKE processTransaction, ADDR account
 	.ELSEIF al == 2
+		STC ; Don't logout the user, remove it when function is ready
 		;call aboutUs
 	.ELSEIF al == 3
 		INVOKE printMonthlyStatement, ADDR account
 	.ELSEIF al == 4
-		call changeCredentials
+		INVOKE changeCredentials, user
 	.ELSEIF al == 5
+		STC ; Don't logout the user, remove it when function is ready
 		;call switchAccount
 	.ENDIF
 

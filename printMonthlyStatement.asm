@@ -240,7 +240,7 @@ printMonthlyStatement PROC,
 
     ; Wait for user input
     call ReadChar
-    STC
+    STC ; Don't logout the user
     
     ret
 printMonthlyStatement ENDP

@@ -25,6 +25,7 @@
     <MASM Include="displayCustomerMenu.asm" />
     <MASM Include="displayMainMenu.asm" />
     <MASM Include="encrypt.asm" />
+    <MASM Include="validatePasswordComplexity.asm" />
     <MASM Include="generateOTP.asm" />
     <MASM Include="generateTransactionId.asm" />
     <MASM Include="helper.asm" />

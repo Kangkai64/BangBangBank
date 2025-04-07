@@ -19,8 +19,7 @@ validatePassword PROC,
     pushad
 
     ; First determine key length
-    mov edx, encryptionKey
-    call Str_length
+    INVOKE Str_length, ADDR encryptionKey
     mov ecx, eax            ; Store key length in ECX
     
     ; Hash the input password with encryption key
@@ -29,46 +28,13 @@ validatePassword PROC,
     ; EAX now contains pointer to encrypted result
     mov esi, eax                         ; Encrypted input password
     INVOKE Str_length, esi
-    INVOKE convertHexToString, esi, ADDR validationBuffer, eax  ; Convert binary to string
+    INVOKE convertHexToString, esi, ADDR validationBuffer, eax  ; Convert hex values to string
     lea esi, validationBuffer            ; Now use string version for comparison
     mov edi, hashedPassword              ; Stored hashed password
 
     ; Compare the results
-    push ecx                ; Save registers
-    push esi
-    push edi
-
-compareLoop:
-    mov al, [esi]
-    mov dl, [edi]
-    
-    ; There's space in the hashed password
-    checkSpace:
-        cmp dl, ' '
-        jne continue
-        inc edi
-        jmp compareLoop
-
-    continue:
-    ; Check if we've reached the end of either string
-    cmp al, 0
-    je checkEndDest
-    cmp dl, 0
-    je notMatching
-    
-    ; Compare characters
-    cmp al, dl
-    jne notMatching
-    
-    ; Move to next character
-    inc esi
-    inc edi
-    jmp compareLoop
-    
-checkEndDest:
-    cmp dl, 0               ; Check if destination also ended
-    jne notMatching
-    jmp comparisonDone      ; Both strings ended, match found
+    INVOKE Str_compare, ADDR validationBuffer, hashedPassword
+    je comparisonDone       ; If equal, clear carry flag
     
 notMatching:
     STC                     ; Set failure flag
@@ -78,9 +44,6 @@ comparisonDone:
     CLC ; Clear carry if successed
 
 validatePasswordExit:
-    pop edi                 ; Restore registers
-    pop esi
-    pop ecx
     popad
     ret
 validatePassword ENDP

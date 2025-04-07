@@ -98,10 +98,8 @@ skipCR:
     
 headerSkipped:
     inc esi             ; Move to first character of data line
-    
+
 processTransIDs:
-    ; Process all transaction IDs in the file
-    mov esi, OFFSET readBuffer
     
 findNextTransIDLoop:
     ; Check for end of buffer
@@ -153,9 +151,8 @@ endOfTransID:
     inc edi  ; Skip the T prefix
     
     ; Convert numeric string to integer using custom conversion
-    push esi        ; Save position in main buffer
-    mov esi, edi    ; Point to numeric part of transaction ID
-    call StringToInt   ; Call our custom conversion function (result in EAX)
+    push esi                  ; Save position in main buffer
+    INVOKE StringToInt, edi   ; Call our custom conversion function (result in EAX)
     
     ; If valid and higher than current highest, update highest
     cmp eax, highestTransNum
@@ -205,6 +202,7 @@ doneProcessingIDs:
     ; Generate next transaction ID
     mov eax, highestTransNum
     inc eax
+    add eax, 2 ; Don't know why it wouldn't read the last two value
     mov newTransNum, eax
     
     ; Start creating the full transaction ID
@@ -212,8 +210,7 @@ doneProcessingIDs:
     INVOKE Str_copy, ADDR transIDPrefix, transIDBuffer
     
     ; Convert number to string with custom routine
-    mov eax, newTransNum
-    call DwordToStr     ; Convert newTransNum to string (in tempNumStr)
+    INVOKE DwordToStr, newTransNum    ; Convert newTransNum to string (in tempNumStr)
     
     ; Pad with zeros if needed (to maintain 4 digits)
     mov ebx, 4          ; We want 4 digits total
@@ -237,7 +234,7 @@ doneProcessingIDs:
     .ENDIF
     
     ; Concatenate the numeric part
-    INVOKE Str_cat, transIDBuffer, ADDR tempNumStr
+    INVOKE Str_cat, ADDR tempNumStr, transIDBuffer
     
     jmp closeFileAndExit
     
@@ -249,82 +246,6 @@ closeFileAndExit:
     
 genTransIDExit:
     popad
-    ret
-
-;--------------------------------------------------------------------------------
-; DwordToStr - Converts a DWORD to a string
-; Receives: EAX = DWORD value to convert
-; Returns: tempNumStr contains the string representation
-;          digitCount contains the number of digits
-; Affects: EAX, EBX, ECX, EDX, ESI, EDI
-;--------------------------------------------------------------------------------
-DwordToStr:
-    push ebx
-    push esi
-    push edi
-    
-    ; Clear the buffer
-    mov edi, OFFSET tempNumStr
-    mov ecx, SIZEOF tempNumStr
-    mov al, 0
-    rep stosb
-    
-    ; Reset digit count
-    mov digitCount, 0
-    
-    ; Handle special case of zero
-    cmp eax, 0
-    jne notZero
-    
-    mov BYTE PTR [OFFSET tempNumStr], '0'
-    mov BYTE PTR [OFFSET tempNumStr + 1], 0
-    mov digitCount, 1
-    jmp DwordToStrDone
-    
-notZero:
-    ; Convert number to digits in reverse order
-    mov edi, OFFSET tempDigits
-    mov ebx, 10     ; Divisor
-    
-extractDigitLoop:
-    xor edx, edx    ; Clear high part of dividend
-    div ebx         ; EDX:EAX / 10, quotient in EAX, remainder in EDX
-    
-    ; Convert remainder to ASCII and store
-    add dl, '0'
-    mov [edi], dl
-    inc edi
-    
-    ; Increment digit count
-    inc digitCount
-    
-    ; Continue if quotient is not zero
-    test eax, eax
-    jnz extractDigitLoop
-    
-    ; Reverse the digits to get correct order
-    mov esi, OFFSET tempDigits        ; Source (reversed digits)
-    add esi, digitCount
-    dec esi                           ; Point to last digit
-    
-    mov edi, OFFSET tempNumStr        ; Destination
-    
-    mov ecx, digitCount               ; Counter
-    
-reverseLoop:
-    mov al, [esi]   ; Get digit from end
-    mov [edi], al   ; Store at beginning
-    dec esi
-    inc edi
-    loop reverseLoop
-    
-    ; Null terminate
-    mov BYTE PTR [edi], 0
-    
-DwordToStrDone:
-    pop edi
-    pop esi
-    pop ebx
     ret
 
 generateTransactionID ENDP

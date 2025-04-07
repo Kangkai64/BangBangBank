@@ -21,7 +21,6 @@ readLineBuffer       BYTE 1024 DUP(?)  ; Buffer for reading lines
 tempUserBuffer       BYTE 512 DUP(?)   ; Buffer for extracted username
 outputBuffer         BYTE 2048 DUP(?)  ; Buffer for writing
 eolMarker            BYTE NEWLINE, 0   ; End of line marker
-timeStampFormat      BYTE "%02d/%02d/%04d %02d:%02d:%02d",0
 
 ; Messages
 fileReadErrorMsg     BYTE "Error: Could not open user credentials file for reading", 0
@@ -33,6 +32,7 @@ headerLine           BYTE "username,hashed_password,hashed_PIN,customer_id,encry
 commaChar            BYTE ",", 0
 zeroVal              BYTE "0", 0
 dashVal              BYTE "-", 0
+spaceChar            BYTE " ", 0
 currTime             SYSTEMTIME <>     ; For timestamp
 
 .code
@@ -408,102 +408,4 @@ resetDone:
     popad
     ret
 resetLoginAttempt ENDP
-
-;--------------------------------------------------------------------------------
-; changeUserCredential PROC
-; Updates specific fields in a user's credentials
-; Receives: Pointer to userCredential structure with fields to update
-;           (only fields with non-empty values will be updated)
-; Returns : Carry flag is set if failed, clear if successful
-;--------------------------------------------------------------------------------
-changeUserCredential PROC,
-    newCred: PTR userCredential
-    
-    LOCAL currCred: userCredential
-    
-    pushad
-    
-    ; Copy username from new credentials
-    mov esi, newCred
-    add esi, OFFSET userCredential.username
-    INVOKE Str_copy, esi, ADDR currCred.username
-    
-    ; Read current user data
-    INVOKE inputFromFile, ADDR currCred
-    
-    ; Check if user found
-    jc changeFailed
-    
-    ; Check and update password if provided
-    mov esi, newCred
-    add esi, OFFSET userCredential.hashed_password
-    cmp BYTE PTR [esi], 0
-    je checkPin  ; Skip if empty
-    
-    lea edi, currCred.hashed_password
-    INVOKE Str_copy, esi, edi
-    
-checkPin:
-    ; Check and update PIN if provided
-    mov esi, newCred
-    add esi, OFFSET userCredential.hashed_pin
-    cmp BYTE PTR [esi], 0
-    je checkCustomerId  ; Skip if empty
-    
-    lea edi, currCred.hashed_pin
-    INVOKE Str_copy, esi, edi
-    
-checkCustomerId:
-    ; Check and update customer ID if provided
-    mov esi, newCred
-    add esi, OFFSET userCredential.customer_id
-    cmp BYTE PTR [esi], 0
-    je checkEncryptionKey  ; Skip if empty
-    
-    lea edi, currCred.customer_id
-    INVOKE Str_copy, esi, edi
-    
-checkEncryptionKey:
-    ; Check and update encryption key if provided
-    mov esi, newCred
-    add esi, OFFSET userCredential.encryption_key
-    cmp BYTE PTR [esi], 0
-    je checkLoginAttempt  ; Skip if empty
-    
-    lea edi, currCred.encryption_key
-    INVOKE Str_copy, esi, edi
-    
-checkLoginAttempt:
-    ; Check and update login attempt if provided
-    mov esi, newCred
-    add esi, OFFSET userCredential.loginAttempt
-    cmp BYTE PTR [esi], 0
-    je checkTimestamp  ; Skip if empty
-    
-    lea edi, currCred.loginAttempt
-    INVOKE Str_copy, esi, edi
-    
-checkTimestamp:
-    ; Check and update timestamp if provided
-    mov esi, newCred
-    add esi, OFFSET userCredential.firstLoginAttemptTimestamp
-    cmp BYTE PTR [esi], 0
-    je updateCredentials  ; Skip if empty
-    
-    lea edi, currCred.firstLoginAttemptTimestamp
-    INVOKE Str_copy, esi, edi
-    
-updateCredentials:
-    ; Write the updated user credentials
-    INVOKE updateUserFile, ADDR currCred
-    CLC ; Return Success
-    jmp changeDone
-    
-changeFailed:
-    STC
-    
-changeDone:
-    popad
-    ret
-changeUserCredential ENDP
 END

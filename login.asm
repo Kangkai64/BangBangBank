@@ -14,6 +14,7 @@ loginDesign BYTE "Bang Bang Bank Login", NEWLINE,
             "User Login", NEWLINE,
             "==============================", NEWLINE, 0
 promptPasswordMsg BYTE "Please enter your password: ", 0
+emptyUsernameMsg  BYTE NEWLINE, "Username cannot be empty.", 0
 loginAttemptLimitReachedMsg BYTE NEWLINE, "You have reached your login attempt limit. Please try again at ", 0
 loginSuccessMsg BYTE "Login successful! Welcome to Bang Bang Bank.", NEWLINE, 0
 loginFailMsg BYTE NEWLINE, "Login failed. Incorrect username or password.", NEWLINE, 0
@@ -27,13 +28,23 @@ user userCredential <>
 
 .code
 login PROC
-    
+
+loginPrompt:
     ; Display login design
     INVOKE printString, OFFSET loginDesign
     
     ; Read username and password
-    INVOKE promptForUsername, OFFSET inputUsername
-    INVOKE promptForPassword, OFFSET inputPassword, ADDR promptPasswordMsg
+    INVOKE promptForUsername, ADDR inputUsername
+    INVOKE promptForPassword, ADDR inputPassword, ADDR promptPasswordMsg
+
+    ; Check if username is empty
+    INVOKE Str_length, ADDR inputUsername
+    .IF eax == 0
+        INVOKE printString, ADDR emptyUsernameMsg
+        call Wait_Msg
+        call Clrscr
+        jmp loginPrompt
+    .ENDIF
     
     ; Copy input username to user structure
     INVOKE Str_copy, ADDR inputUsername, ADDR user.username

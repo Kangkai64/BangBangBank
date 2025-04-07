@@ -5,6 +5,7 @@ INCLUDE BangBangBank.inc
 ; This module will prompt and get the password with masking and trims it
 ; to avoid excessive spaces
 ; Receives : The address / pointer of the password variable from caller
+;            and the address / pointer of the prompt message
 ; Returns : Nothing
 ; Last update: 15/3/2025
 ;------------------------------------------------------------------------

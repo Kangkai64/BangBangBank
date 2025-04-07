@@ -128,39 +128,4 @@ verifyOTP PROC USES ebx ecx edx esi edi,
     otpVerificationDone:
         ret
 verifyOTP ENDP
-
-;------------------------------------------------------------------------
-; Str_concat - Concatenates source string to end of destination string
-; Receives: EDX = pointer to destination string (null-terminated)
-;           ESI = pointer to source string (null-terminated)
-; Returns: Nothing, but destination string is modified
-; Requires: Destination string must have enough space to hold the result
-; Preserves: All registers
-;------------------------------------------------------------------------
-Str_concat PROC USES eax ecx edx esi edi,
-    destStr:PTR BYTE,    ; Pointer to destination string
-    srcStr:PTR BYTE      ; Pointer to source string
-
-    ; Get pointers to the strings
-    mov edi, destStr
-    mov esi, srcStr
-    
-    ; Find end of destination string
-    mov ecx, 0FFFFh      ; Maximum length guard
-    mov al, 0            ; Search for null terminator
-    cld                  ; Direction = forward
-    repne scasb          ; Search for AL (0) in the string at EDI
-    dec edi              ; Back up to the null terminator position
-    
-    ; Copy source string to end of destination string
-copyLoop:
-    mov al, [esi]        ; Get char from source
-    mov [edi], al        ; Store it in destination
-    inc esi              ; Next source character
-    inc edi              ; Next destination position
-    cmp al, 0            ; Check for null terminator
-    jne copyLoop         ; If not end of string, continue
-
-    ret
-Str_concat ENDP
 END
