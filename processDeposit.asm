@@ -1,12 +1,12 @@
-
 INCLUDE BangBangBank.inc
 
-;------------------------------------------------------------------------
-; This module will process transaction
-; Receives : Nothing
+;----------------------------------------------------------------------------
+; This module will process the deposit and reflect it to the account balance
+; Receives : The address / pointer of the user account variable
 ; Returns : Nothing
-; Last update: 25/3/2025
-;------------------------------------------------------------------------
+; Last update: 7/4/2025
+;----------------------------------------------------------------------------
+
 .data
 dateHeader BYTE "Date & Time: ", 0
 currentTime SYSTEMTIME <>
@@ -16,32 +16,30 @@ transactionPageTitle BYTE "Bang Bang Bank Transaction", NEWLINE,
                           "==============================", NEWLINE,0
 transactionDetailTitle BYTE "Transaction details", NEWLINE,
                             "==============================", NEWLINE,0
-recipientAccNotFound BYTE "Recipient account not found...", NEWLINE,0
-selfAccountErrorMsg BYTE "You cannot enter your own account number as recipient.", NEWLINE, 0
-recipientAccount userAccount <>
 amount BYTE "Amount : RM ",0
 confirmMsg BYTE "Press 1 to confirm and press 2 to cancel", NEWLINE,0
 transactionIdMsg BYTE "Transaction ID: ", 0
 recipientAccMsg BYTE "Account No: ",0
 recipientNameMsg BYTE "Recipient Name: ", 0  
-transTypeMsg BYTE "Transaction Type: Transaction", 0
+transTypeMsg BYTE "Transaction Type: Deposit", 0
 transactionSuccessful BYTE "Transaction Successful!",0
 transactionCancel BYTE "Transaction Cancelled!",0
 invalidOption BYTE "Invalid option. Please try again.", 0
 transactionVerifiedMsg BYTE "OTP verification successful! Transaction completed.", NEWLINE, 0
 transactionFailedMsg BYTE "OTP verification failed! Transaction cancelled.", NEWLINE, 0
 resendOTPMsg BYTE "OTP will resend to the same file.", 0
-inputRecipientAccNo BYTE 255 DUP(?)
-inputTransactionAmount BYTE 255 DUP(?)
-tempBuffer BYTE 32 DUP(0)
-formattedTransactionAmount BYTE 32 DUP(0)
+promptTransactionAmtMsg BYTE "Enter deposit amount (RM): ", 0
+inputDepositAmount BYTE 255 DUP(?)
+formattedDepositAmount BYTE 32 DUP(0)
 newTransactionId BYTE 255 DUP(?)
+formattedAccountBalance BYTE 32 DUP(0)
+tempBuffer BYTE 32 DUP(0)
 transactionRecord userTransaction <>
-transferTypeStr BYTE "Transfer", 0
-transferDesc BYTE "Transfer sent to another account", 0
+transferTypeStr BYTE "Deposit", 0
+transferDesc BYTE "Cash deposit into account", 0
 
 .code
-processTransaction PROC,
+processDeposit PROC,
     account: PTR userAccount
 
     call Clrscr
@@ -65,25 +63,10 @@ processTransaction PROC,
     ;Display transaction page
     INVOKE printString, ADDR transactionPageTitle
 
-    ; prompt for recipient account number
-    INVOKE promptForRecipientAccNo, OFFSET inputRecipientAccNo
-
-    ;validate recipient account
-    INVOKE validateRecipientAcc, OFFSET inputRecipientAccNo
-    .IF EAX == 0
-        INVOKE printString, ADDR recipientAccNotFound
-        call Wait_Msg
-        STC
-        jmp done
-    .ENDIF
     ;prompt transaction amount
+    INVOKE promptForTransactionAmount, OFFSET inputDepositAmount, account
 
-    ; Read user account from userAccount.txt
-	INVOKE inputFromAccount, ADDR recipientAccount
-
-    INVOKE promptForTransactionAmount, OFFSET inputTransactionAmount, account
-
-    jc done ; Invalid transaction amount
+    jc done
     ; confirm transaction
 
 confirmTransaction:
@@ -98,11 +81,16 @@ confirmTransaction:
 
     ; Print recipient's name
     INVOKE printString, ADDR recipientNameMsg
-    INVOKE printString, recipientAccount.full_name
+    mov esi, account
+    add esi, OFFSET userAccount.full_name
+    INVOKE printString, esi
+    Call Crlf
 
     ; Print recipient's account
     INVOKE printString, ADDR recipientAccMsg
-    INVOKE printString, ADDR inputRecipientAccNo
+    mov esi, account
+    add esi, OFFSET userAccount.account_number
+    INVOKE printString, esi
     Call Crlf
     
     ; Print transaction type
@@ -111,22 +99,22 @@ confirmTransaction:
   
     ; Print amount
     INVOKE printString, ADDR amount
-    INVOKE addDecimalPoint, ADDR inputTransactionAmount, ADDR formattedTransactionAmount
-    INVOKE printString, ADDR formattedTransactionAmount
+    INVOKE addDecimalPoint, ADDR inputDepositAmount, ADDR formattedDepositAmount
+    INVOKE printString, ADDR formattedDepositAmount
     Call Crlf 
 
     INVOKE printString, ADDR dateHeader
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
-	INVOKE printString, ADDR timeDate
+    INVOKE printString, ADDR timeDate
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
     Call Crlf
     Call Crlf
 
     INVOKE printString, ADDR confirmMsg
     Call Crlf
-
+    
     INVOKE promptForIntChoice, 1, 2
-
+    
     .IF CARRY? ; Return if the input is invalid
         INVOKE printString, ADDR invalidOption
         call Wait_Msg
@@ -150,6 +138,26 @@ validateOTP:
     .IF eax == 1   ; If OTP verification was successful
         INVOKE printString, ADDR transactionVerifiedMsg
         INVOKE printString, ADDR transactionSuccessful
+        call Wait_Msg
+
+        ; Get the current account balance and format it (remove decimal point)
+        mov esi, account
+        add esi, OFFSET userAccount.account_balance
+        INVOKE removeDecimalPoint, esi, ADDR formattedAccountBalance
+
+        ; Add the deposit amount to the account balance
+        INVOKE decimalArithmetic, ADDR formattedAccountBalance, ADDR inputDepositAmount, ADDR tempBuffer, '+'
+
+        ; Add decimal point back to the result
+        INVOKE addDecimalPoint, ADDR tempBuffer, esi
+
+        ; Copy the updated balance into the user's account balance
+        mov edi, account
+        add edi, OFFSET userAccount.account_balance
+        INVOKE Str_copy, esi, edi
+
+        ; Update the user account file with new balance
+        INVOKE updateUserAccountFile, account
 
         ; Format transaction record with the values
         ; Copy transaction ID
@@ -160,29 +168,18 @@ validateOTP:
         add esi, OFFSET userAccount.customer_id
         INVOKE Str_copy, esi, ADDR transactionRecord.customer_id
 
-        ; Set transaction type as "Transfer"
+        ; Set transaction type as "Deposit"
         INVOKE Str_copy, ADDR transferTypeStr, ADDR transactionRecord.transaction_type
 
-        ; Format amount with minus sign (for transfer out)
-        mov al, '-'
-        mov transactionRecord.amount[0], al ; Set first character as '-'
-        INVOKE Str_copy, ADDR formattedTransactionAmount, ADDR (transactionRecord.amount+1)
+        ; Format amount with plus sign (for deposit)
+        mov al, '+'
+        mov transactionRecord.amount[0], al ; Set first character as '+'
+        INVOKE Str_copy, ADDR formattedDepositAmount, ADDR (transactionRecord.amount+1)
 
-        ; Get the current account balance and format it (remove decimal point)
-        mov esi, account
-        add esi, OFFSET userAccount.account_balance
-        INVOKE removeDecimalPoint, esi, ADDR formattedTransactionAmount
+        ; Copy updated account balance
+        INVOKE Str_copy, edi, ADDR transactionRecord.balance
 
-        ; Calculate and set new balance (current balance - transfer amount)
-        INVOKE decimalArithmetic, ADDR formattedTransactionAmount, ADDR inputTransactionAmount, ADDR tempBuffer, '-'
-
-        ; Add decimal point back to the result
-        INVOKE addDecimalPoint, ADDR tempBuffer, esi
-
-        ; Copy the updated balance into the user's account balance
-        INVOKE Str_copy, esi, ADDR transactionRecord.balance
-
-        ; Set description as "Transfer sent to another account"
+        ; Set description as "Cash deposit into account"
         INVOKE Str_copy, ADDR transferDesc, ADDR transactionRecord.transaction_detail
 
         ; Copy date
@@ -196,7 +193,6 @@ validateOTP:
         ; Insert the transaction log
         INVOKE insertTransaction, ADDR transactionRecord
 
-        call Wait_Msg
     .ELSEIF eax == 2 ; IF OTP was expired, resend otp
         INVOKE printString, ADDR resendOTPMsg
         call Wait_Msg
@@ -210,5 +206,5 @@ validateOTP:
 done:
     STC ; Don't logout the user
     ret
-processTransaction ENDP
+processDeposit ENDP
 END

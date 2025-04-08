@@ -2,31 +2,90 @@
 INCLUDE BangBangBank.inc
 
 ;--------------------------------------------------------------------------------
-; This module will read user credentials from a single file containing all users
-; Receives: Pointer to userCredential structure (user)
-; Returns: EAX = 0 if the user is not found
-; Last update: 16/3/2025
+; BangBangBank File Operations Module
+; Unified procedures for reading, writing, and updating bank data files
+; Last update: 08/04/2025
 ;--------------------------------------------------------------------------------
 
 .data
-; File name components
-directoryPath       BYTE "Users\", 0
-credentialFileName  BYTE "Users\userCredential.txt", 0
-transactionFileName BYTE "Users\transactionLog.txt", 0
+; File type constants
+FILE_TYPE_CREDENTIALS   EQU 1
+FILE_TYPE_ACCOUNTS      EQU 2
+FILE_TYPE_TRANSACTIONS  EQU 3
 
-; Handles and buffers
-fileHandle         DWORD ?
-readBuffer         BYTE 20480 DUP(?)  ; Larger buffer for multi-user file
-errorMsg           BYTE "Error: File cannot be opened or read", NEWLINE, 0
-pathErrorMsg       BYTE "Error: Invalid file path", NEWLINE, 0
-bytesRead          DWORD ?
-tempBuffer         BYTE 512 DUP(?)
-fieldBuffer        BYTE 512 DUP(?)
-currentLineStart   DWORD 0
-foundUser          BYTE 0
-inputUsername      BYTE 64 DUP(?)
+; File paths
+credentialFileName     BYTE "Users\userCredential.txt", 0
+tempCredentialFile     BYTE "Users\userCredential.tmp", 0
+accountFileName        BYTE "Users\userAccount.txt", 0
+tempAccountFile        BYTE "Users\userAccount.tmp", 0
+transactionFileName    BYTE "Users\transactionLog.txt", 0
+tempTransactionFile    BYTE "Users\transactionLog.tmp", 0
+directoryPath          BYTE "Users\", 0
+
+; File handling variables
+currentSourceFile      DWORD ?  ; Pointer to current source file path
+currentTempFile        DWORD ?  ; Pointer to current temp file path
+fileHandle            DWORD ?
+fileReadHandle        DWORD ?
+fileWriteHandle       DWORD ?
+readBuffer            BYTE 20480 DUP(?)  ; Larger buffer for file reading
+bytesRead             DWORD ?
+bytesWritten          DWORD ?
+
+; Buffer variables
+readLineBuffer        BYTE 1024 DUP(?)  ; Buffer for reading lines
+tempBuffer            BYTE 512 DUP(?)   ; For temporary storage
+fieldBuffer           BYTE 512 DUP(?)   ; Buffer for extracted field
+outputBuffer          BYTE 4096 DUP(?)  ; Buffer for writing
+eolMarker             BYTE NEWLINE, 0   ; End of line marker
+formatPtr             DWORD ?
+currentLineStart      DWORD 0
+
+; Flags and fields
+foundUser             BYTE 0
+foundAccount          BYTE 0
+foundTransaction      BYTE 0
+inputUsername         BYTE 64 DUP(?)
+userCustomerID        BYTE 32 DUP(?)
+fieldIndex            DWORD 0
+totalCredit           DWORD 0              
+totalDebit            DWORD 0 
+
+; Error messages
+errorMsg              BYTE "Error: File cannot be opened or read", NEWLINE, 0
+pathErrorMsg          BYTE "Error: Invalid file path", NEWLINE, 0
+userNotFoundMsg       BYTE NEWLINE, "User not found.", NEWLINE, 0
+fileReadErrorMsg      BYTE "Error: Could not open source file for reading", 0
+fileWriteErrorMsg     BYTE "Error: Could not open temporary file for writing", 0
+fileDeleteErrorMsg    BYTE "Error: Could not delete original file", 0
+fileRenameErrorMsg    BYTE "Error: Could not rename temporary file", 0
+
+; CSV formatting
+commaChar             BYTE ",", 0
+zeroVal               BYTE "0", 0
+dashVal               BYTE "-", 0
+spaceChar             BYTE " ", 0
+
+; Transaction type strings
+DepositStr            BYTE "Deposit", 0
+TransferStr           BYTE "Transfer", 0
+
+; CSV Headers
+headerCredentialLine  BYTE "username,hashed_password,hashed_PIN,customer_id,encryption_key,loginAttempt,firstLoginAttemptTimestamp", NEWLINE, 0
+headerAccountLine     BYTE "account_number,customer_id,full_name,phone_number,email,account_balance,opening_date,transaction_limit,branch_name,branch_address,account_type,currency,beneficiaries", NEWLINE, 0
+headerTransactionLine BYTE "transaction_id,customer_id,transaction_type,amount,balance,transaction_detail,date,time", NEWLINE, 0
+
+; System time structure for timestamps
+currTime              SYSTEMTIME <>
 
 .code
+;--------------------------------------------------------------------------------
+; inputFromFile PROC
+; Reads user credentials from a file
+; Receives: Pointer to userCredential structure (user)
+; Returns: EAX = 0 if the user is not found
+; Last update: 08/04/2025
+;--------------------------------------------------------------------------------
 inputFromFile PROC,
     user: PTR userCredential
     
@@ -188,7 +247,7 @@ inputFromFile ENDP
 ;--------------------------------------------------------------------------------
 parseUserCredentials PROC,
     user: PTR userCredential
-    
+
 parseNextCredField:
     ; Parse username field
     mov edi, OFFSET fieldBuffer
@@ -242,4 +301,509 @@ parseNextCredField:
 doneParsingFields:
     ret
 parseUserCredentials ENDP
+
+;--------------------------------------------------------------------------------
+; inputFromAccount PROC
+; This procedure reads user account data from a single file by customer ID
+; Receives: Pointer to userAccount structure (account) with customer_id filled
+; Returns: EAX = 0 if the user account is not found
+; Last update: 08/04/2025
+;--------------------------------------------------------------------------------
+inputFromAccount PROC,
+    account: PTR userAccount
+    
+    pushad
+
+    ; Copy out the customer_id and store it into userCustomerID
+    mov esi, [account]
+    add esi, OFFSET userAccount.customer_id
+    INVOKE Str_copy, esi, ADDR userCustomerID
+
+    ; Open the account file
+    INVOKE CreateFile, 
+        ADDR accountFileName,            ; lpFileName
+        GENERIC_READ,                    ; dwDesiredAccess
+        FILE_SHARE_READ,                 ; dwShareMode
+        NULL,                            ; lpSecurityAttributes
+        OPEN_EXISTING,                   ; dwCreationDisposition
+        FILE_ATTRIBUTE_NORMAL,           ; dwFlagsAndAttributes
+        NULL                             ; hTemplateFile
+        
+    mov fileHandle, eax
+    
+    ; Check if file opened successfully
+    cmp eax, INVALID_HANDLE_VALUE
+    jne fileOpenSuccess
+    
+    ; File open error
+    INVOKE printString, ADDR accountFileName
+    call Crlf
+    INVOKE printString, ADDR errorMsg
+
+    call Wait_Msg
+    mov foundAccount, 0  ; Set not found flag
+    jmp readAccountFileExit
+    
+fileOpenSuccess:
+    ; Read file content into buffer
+    INVOKE ReadFile, 
+        fileHandle,                     ; hFile
+        ADDR readBuffer,                ; lpBuffer
+        SIZEOF readBuffer - 1,          ; nNumberOfBytesToRead
+        ADDR bytesRead,                 ; lpNumberOfBytesRead
+        NULL                            ; lpOverlapped
+    
+    ; Check if read was successful
+    .IF eax == 0
+        INVOKE printString, ADDR errorMsg
+        call Wait_Msg
+        mov foundAccount, 0  ; Set not found flag
+        jmp readAccountFileExit
+    .ENDIF
+    
+    ; Add null terminator to buffer
+    mov edi, OFFSET readBuffer
+    add edi, bytesRead
+    mov BYTE PTR [edi], 0
+    
+    ; Skip the header line
+    mov esi, OFFSET readBuffer
+    
+skipHeaderLoop:
+    mov al, [esi]
+    cmp al, 0          ; End of buffer?
+    je accountNotFound ; File is empty or only has header
+    cmp al, 10         ; LF - new line?
+    je foundDataStart
+    cmp al, 13         ; CR?
+    je skipCR
+    inc esi
+    jmp skipHeaderLoop
+    
+skipCR:
+    inc esi            ; Skip CR
+    cmp BYTE PTR [esi], 10  ; Check for LF
+    jne skipHeaderLoop
+    inc esi            ; Skip LF
+    
+foundDataStart:
+    
+    ; Set foundAccount flag to 0 (not found)
+    mov foundAccount, 0
+    
+searchAccountLoop:
+    ; Store the start of current line
+    mov currentLineStart, esi
+    
+    ; Skip account_number field (first field)
+    mov edi, OFFSET tempBuffer
+    call ParseCSVField
+    
+    ; Parse customer_id field from current line (second field)
+    mov edi, OFFSET tempBuffer
+    call ParseCSVField
+
+    ; Compare with input customer_id
+    INVOKE Str_compare, ADDR tempBuffer, ADDR userCustomerID
+    
+    ; If match found
+    .IF ZERO?
+        ; Found the account! Set flag
+        mov foundAccount, 1
+        
+        ; Return to the start of this line
+        mov esi, currentLineStart
+        
+        ; Parse all fields for this account
+        INVOKE parseUserAccount, account
+        
+        jmp readAccountFileExit
+    .ENDIF
+    
+    ; CustomerID didn't match, skip to next line
+skipToNextLine:
+    mov al, [esi]
+    cmp al, 0      ; End of file?
+    je accountNotFound
+    cmp al, 10     ; LF?
+    je nextLine
+    cmp al, 13     ; CR?
+    je skipToNextCR
+    inc esi
+    jmp skipToNextLine
+    
+skipToNextCR:
+    inc esi        ; Skip CR
+    cmp BYTE PTR [esi], 10  ; Check for LF
+    jne skipToNextLine
+    inc esi        ; Skip LF
+    jmp searchAccountLoop
+    
+nextLine:
+    inc esi        ; Skip LF
+    jmp searchAccountLoop
+    
+accountNotFound:
+    mov eax, FALSE
+    mov [esp+28], eax
+    
+readAccountFileExit:
+    INVOKE CloseHandle, fileHandle
+    popad
+    ret
+inputFromAccount ENDP
+
+;--------------------------------------------------------------------------------
+; parseUserAccount PROC
+; Parses all account fields for the current user and fills the structure
+; Receives: ESI = pointer to start of account record in buffer
+;           account = pointer to userAccount structure
+; Returns: Filled user account structure
+;--------------------------------------------------------------------------------
+parseUserAccount PROC,
+    account: PTR userAccount
+    
+parseNextAccountField:
+    
+    ; Parse account_number field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.account_number
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse customer_id field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.customer_id
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse full_name field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.full_name
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse phone_number field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.phone_number
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse email field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.email
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse account_balance field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.account_balance
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse opening_date field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.opening_date
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse transaction_limit field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.transaction_limit
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse branch_name field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.branch_name
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse branch_address field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.branch_address
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse account_type field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.account_type
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse currency field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.currency
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse beneficiaries field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.beneficiaries
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+doneParsingFields:
+    ret
+parseUserAccount ENDP
+
+;--------------------------------------------------------------------------------
+; inputFromTransaction PROC
+; This procedure reads user transaction data from a single file by customer ID
+; Receives: Pointer to userTransaction structure (transaction) with customer_id filled
+; Returns: EAX = 0 if the user transaction is not found
+; Last update: 08/04/2025
+;--------------------------------------------------------------------------------
+inputFromTransaction PROC,
+    transaction: PTR userTransaction
+    
+    pushad
+
+    ; Copy out the customer_id and store it into userCustomerID
+    mov esi, [transaction]
+    add esi, OFFSET userTransaction.customer_id
+    INVOKE Str_copy, esi, ADDR userCustomerID
+
+    ; Open the transaction file
+    INVOKE CreateFile, 
+        ADDR transactionFileName,        ; lpFileName
+        GENERIC_READ,                    ; dwDesiredAccess
+        FILE_SHARE_READ,                 ; dwShareMode
+        NULL,                            ; lpSecurityAttributes
+        OPEN_EXISTING,                   ; dwCreationDisposition
+        FILE_ATTRIBUTE_NORMAL,           ; dwFlagsAndAttributes
+        NULL                             ; hTemplateFile
+        
+    mov fileHandle, eax
+    
+    ; Check if file opened successfully
+    cmp eax, INVALID_HANDLE_VALUE
+    jne fileOpenSuccess
+    
+    ; File open error
+    INVOKE printString, ADDR transactionFileName
+    call Crlf
+    INVOKE printString, ADDR errorMsg
+
+    call Wait_Msg
+    mov foundTransaction, 0  ; Set not found flag
+    jmp readTransactionFileExit
+    
+fileOpenSuccess:
+    ; Read file content into buffer
+    INVOKE ReadFile, 
+        fileHandle,                     ; hFile
+        ADDR readBuffer,                ; lpBuffer
+        SIZEOF readBuffer - 1,          ; nNumberOfBytesToRead
+        ADDR bytesRead,                 ; lpNumberOfBytesRead
+        NULL                            ; lpOverlapped
+    
+    ; Check if read was successful
+    .IF eax == 0
+        INVOKE printString, ADDR errorMsg
+        call Wait_Msg
+        mov foundTransaction, 0  ; Set not found flag
+        jmp readTransactionFileExit
+    .ENDIF
+    
+    ; Add null terminator to buffer
+    mov edi, OFFSET readBuffer
+    add edi, bytesRead
+    mov BYTE PTR [edi], 0
+    
+    ; Skip the header line
+    mov esi, OFFSET readBuffer
+    
+skipHeaderLoop:
+    mov al, [esi]
+    cmp al, 0          ; End of buffer?
+    je transactionNotFound ; File is empty or only has header
+    cmp al, 10         ; LF - new line?
+    je foundDataStart
+    cmp al, 13         ; CR?
+    je skipCR
+    inc esi
+    jmp skipHeaderLoop
+    
+skipCR:
+    inc esi            ; Skip CR
+    cmp BYTE PTR [esi], 10  ; Check for LF
+    jne skipHeaderLoop
+    inc esi            ; Skip LF
+    
+foundDataStart:
+    
+    ; Set foundTransaction flag to 0 (not found)
+    mov foundTransaction, 0
+    
+searchTransactionLoop:
+    ; Store the start of current line
+    mov currentLineStart, esi
+    
+    ; Parse transaction_id field from current line (first field)
+    mov edi, OFFSET tempBuffer
+    call ParseCSVField
+
+    ; Parse customer_id field (second field)
+    mov edi, OFFSET tempBuffer
+    call ParseCSVField
+
+    ; Compare with input customer_id
+    INVOKE Str_compare, ADDR tempBuffer, ADDR userCustomerID
+    
+    ; If match found, check transaction type
+    .IF ZERO?
+        ; Parse transaction_type field
+        mov edi, OFFSET tempBuffer
+        call ParseCSVField
+        ; Check if transaction type is Transfer
+        INVOKE Str_compare, ADDR tempBuffer, ADDR TransferStr
+        .IF ZERO?
+            ; Found the transaction! Set flag
+            mov foundTransaction, 1
+            
+            ; Return to the start of this line
+            mov esi, currentLineStart
+        
+            ; Parse all fields for this transaction
+            INVOKE parseUserTransaction, transaction
+            INVOKE calculateTotal, transaction
+            INVOKE printUserTransaction, transaction
+            jmp searchTransactionLoop
+        .ENDIF
+
+        ; Check if transaction type is Deposit
+        INVOKE Str_compare, ADDR tempBuffer, ADDR DepositStr
+        .IF ZERO?
+            ; Found the transaction! Set flag
+            mov foundTransaction, 1
+        
+            ; Return to the start of this line
+            mov esi, currentLineStart
+        
+            ; Parse all fields for this transaction
+            INVOKE parseUserTransaction, transaction
+        
+            INVOKE printUserTransaction, transaction
+            jmp searchTransactionLoop
+        .ENDIF
+    .ENDIF
+    
+    ; CustomerID didn't match, skip to next line
+skipToNextLine:
+    mov al, [esi]
+    cmp al, 0      ; End of file?
+    je transactionNotFound
+    cmp al, 10     ; LF?
+    je nextLine
+    cmp al, 13     ; CR?
+    je skipToNextCR
+    inc esi
+    jmp skipToNextLine
+    
+skipToNextCR:
+    inc esi        ; Skip CR
+    cmp BYTE PTR [esi], 10  ; Check for LF
+    jne skipToNextLine
+    inc esi        ; Skip LF
+    jmp searchTransactionLoop
+    
+nextLine:
+    inc esi        ; Skip LF
+    jmp searchTransactionLoop
+    
+transactionNotFound:
+    mov eax, FALSE
+    mov [esp+28], eax
+    
+readTransactionFileExit:
+    INVOKE CloseHandle, fileHandle
+    popad
+    ret
+inputFromTransaction ENDP
+
+;--------------------------------------------------------------------------------
+; parseUserTransaction PROC
+; Parses all transaction fields for the current user and fills the structure
+; Receives: ESI = pointer to start of transaction record in buffer
+;           transaction = pointer to userTransaction structure
+; Returns: Filled user transaction structure
+;--------------------------------------------------------------------------------
+parseUserTransaction PROC,
+    transaction: PTR userTransaction
+    
+parseNextTransactionField:
+    
+    ; Parse transaction_id field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.transaction_id
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse customer_id field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.customer_id
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse transaction_type field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.transaction_type
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse amount field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.amount
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse balance field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.balance
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse transaction_detail field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.transaction_detail
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+
+    ; Parse date field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.date
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse time field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.time
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+doneParsingFields:
+    ret
+parseUserTransaction ENDP
 END

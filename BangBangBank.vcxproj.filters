@@ -13,28 +13,30 @@
     <MASM Include="inputFromFile.asm" />
     <MASM Include="promptForUsername.asm" />
     <MASM Include="promptForPassword.asm" />
-    <MASM Include="updateUserFile.asm" />
     <MASM Include="validateLoginTime.asm" />
     <MASM Include="helper.asm" />
     <MASM Include="printUserCredentials.asm" />
     <MASM Include="aboutUs.asm" />
     <MASM Include="displayCustomerMenu.asm" />
     <MASM Include="printUserAccount.asm" />
-    <MASM Include="inputFromAccount.asm" />
     <MASM Include="printMonthlyStatement.asm" />
     <MASM Include="switchAccount.asm" />
-    <MASM Include="inputFromTransaction.asm" />
     <MASM Include="printUserTransaction.asm" />
     <MASM Include="processTransaction.asm" />
     <MASM Include="promptForRecipientAccNo.asm" />
     <MASM Include="promptForTransactionAmount.asm" />
     <MASM Include="validateRecipientAcc.asm" />
-    <MASM Include="changeCredentials.asm" />
+    <MASM Include="changePassword.asm" />
     <MASM Include="generateOTP.asm" />
     <MASM Include="generateTransactionId.asm" />
     <MASM Include="checkInterest.asm" />
     <MASM Include="changeCredentials.asm" />
     <MASM Include="calculation.asm" />
+    <MASM Include="validatePasswordComplexity.asm" />
+    <MASM Include="verifyOTP.asm" />
+    <MASM Include="processDeposit.asm" />
+    <MASM Include="updateFile.asm" />
+    <MASM Include="displayLogo.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />

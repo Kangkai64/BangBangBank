@@ -21,17 +21,18 @@
   <ItemGroup>
     <MASM Include="aboutUs.asm" />
     <MASM Include="calculation.asm" />
-    <MASM Include="changeCredentials.asm" />
+    <MASM Include="changePassword.asm" />
     <MASM Include="checkInterest.asm" />
     <MASM Include="displayCustomerMenu.asm" />
+    <MASM Include="displayLogo.asm" />
     <MASM Include="displayMainMenu.asm" />
     <MASM Include="encrypt.asm" />
+    <MASM Include="processDeposit.asm" />
+    <MASM Include="updateFile.asm" />
     <MASM Include="validatePasswordComplexity.asm" />
     <MASM Include="generateOTP.asm" />
     <MASM Include="generateTransactionId.asm" />
     <MASM Include="helper.asm" />
-    <MASM Include="inputFromAccount.asm" />
-    <MASM Include="inputFromTransaction.asm" />
     <MASM Include="printMonthlyStatement.asm" />
     <MASM Include="printUserAccount.asm" />
     <MASM Include="printUserCredentials.asm" />
@@ -47,7 +48,6 @@
     <MASM Include="promptForRecipientAccNo.asm" />
     <MASM Include="promptForTransactionAmount.asm" />
     <MASM Include="switchAccount.asm" />
-    <MASM Include="updateUserFile.asm" />
     <MASM Include="validateLoginTime.asm" />
     <MASM Include="validateRecipientAcc.asm" />
     <MASM Include="verifyOTP.asm" />

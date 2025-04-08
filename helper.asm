@@ -527,66 +527,69 @@ StringToInt ENDP
 ; Returns: EDI = updated position in buffer after the formatted number
 ;--------------------------------------------------------------------------------
 IntToString PROC USES eax ebx ecx edx
-    
-    ; Store original number
-    mov ecx, eax            ; Save original number
+    LOCAL temp[12]: BYTE    ; Temporary buffer for digits (max 10 digits + sign + null)
+    LOCAL isNeg: BYTE
     
     ; Check for negative number
+    mov isNeg, 0
     test eax, eax
-    jns format_positive     ; Jump if not negative
+    jns positive_number
     
-    ; Handle negative number
-    neg eax                 ; Make positive
-    mov BYTE PTR [edi], '-' ; Add negative sign
-    inc edi                 ; Move pointer past sign
+    ; Handle negative
+    mov isNeg, 1
+    neg eax
     
-format_positive:
-    ; Determine number of digits needed
-    mov ebx, 10             ; Base 10
-    
-    ; Handle zero as special case
-    test ecx, ecx
-    jnz not_zero
+positive_number:
+    ; Use a temporary buffer to build the string backwards
+    lea ebx, temp
+    add ebx, 11            ; Point to end of buffer
+    mov BYTE PTR [ebx], 0  ; Null terminate
+    dec ebx
     
     ; Special case for 0
-    mov BYTE PTR [edi], '0'
-    inc edi
-    mov BYTE PTR [edi], 0  ; Null-terminate
-    jmp conversion_done
+    test eax, eax
+    jnz not_zero
+    
+    mov BYTE PTR [ebx], '0'
+    dec ebx
+    jmp prepare_output
     
 not_zero:
-    ; Count digits
-    mov eax, ecx          ; Working with original number
-    xor edx, edx          ; Track digit count
+    ; Convert digits
+    mov ecx, 10            ; Base 10
     
-count_digits:
-    inc edx               ; Increment digit count
+digit_loop:
     xor edx, edx
-    div ebx               ; EAX = quotient, EDX = remainder
+    div ecx                ; EAX = quotient, EDX = remainder
+    add dl, '0'            ; Convert to ASCII
+    mov [ebx], dl          ; Store digit
+    dec ebx                ; Move left
     test eax, eax
-    jnz count_digits
+    jnz digit_loop         ; Continue if more digits
     
-    ; Now we know how many digits
-    mov edx, ecx          ; Get back original number
-    add edi, edx          ; Move to end position
-    mov BYTE PTR [edi], 0 ; Null-terminate
-    dec edi               ; Move to last digit position
+prepare_output:
+    ; Add negative sign if needed
+    cmp isNeg, 1
+    jne copy_to_output
+    mov BYTE PTR [ebx], '-'
+    dec ebx
     
-    ; Convert digits from right to left
-    mov eax, ecx          ; Restore original number
+copy_to_output:
+    ; Copy from temp buffer to output buffer
+    inc ebx                ; Point to first character
     
-gen_digits:
-    xor edx, edx
-    div ebx               ; EAX = quotient, EDX = remainder
-    add dl, '0'           ; Convert to ASCII
-    mov [edi], dl         ; Store digit
-    dec edi               ; Move left
-    test eax, eax
-    jnz gen_digits        ; Continue if more digits
+copy_loop:
+    mov al, [ebx]
+    mov [edi], al
+    inc ebx
+    inc edi
+    cmp al, 0
+    jne copy_loop
     
-conversion_done:
+    ; Adjust EDI to point to the null terminator
+    dec edi
+    
     ret
-    
 IntToString ENDP
 
 ;--------------------------------------------------------------------------------
@@ -655,7 +658,6 @@ digit_loop:
     
 found_decimal:
     mov decimal_found, 1
-    jmp next_digit
     
 next_digit:
     inc esi                 ; Move to next character
@@ -916,7 +918,8 @@ Str_cat ENDP
 ;------------------------------------------------------------------
 ; Str_trim : Remove all occurrences of a given delimiter character
 ;            from both the beginning and end of a string.
-; Receives : The address / pointer to the string
+; Receives : The address / pointer to the string and the character
+;            to be trimmed
 ; Returns: nothing
 ;------------------------------------------------------------------
 myStr_trim PROC USES eax ecx esi edi,
@@ -983,9 +986,9 @@ myStr_trim ENDP
 
 ;--------------------------------------------------------------------------------
 ; DwordToStr - Converts a DWORD to a string
-; Receives: EAX = DWORD value to convert
-; Returns: tempNumStr contains the string representation
-;          digitCount contains the number of digits
+; Receives: DWORD value to convert and pointer / address to store the stringVal
+; Returns: stringVal contains the string representation
+;          EAX contains the number of digits
 ;--------------------------------------------------------------------------------
 DwordToStr PROC USES ebx esi edi,
     dwordVal: DWORD,
@@ -1061,117 +1064,596 @@ DwordToStrDone:
 
 DwordToStr ENDP
 
-;--------------------------------------------------------------------------
-; addDecimal : Adds two string decimal numbers
-; Receives: Two decimal strings without the decimal point and the decimal
-;           point position
-; Returns : EAX with the address of the formatted string
-;--------------------------------------------------------------------------
-addDecimal PROC,
-    decimal_one: PTR BYTE,    ; first decimal string
-    decimal_two: PTR BYTE,    ; second decimal string
-    decimal_position: BYTE    ; position of decimal point from right
+;------------------------------------------------------------------------
+; Str_find - Finds a substring within a string
+; 
+; Receives: ESI = pointer to the source string
+;           EDI = pointer to the substring to find
+; 
+; Returns:  EAX = position of the substring in source (0-based)
+;                 or 0 if the substring was not found
+;------------------------------------------------------------------------
+Str_find PROC USES ebx ecx edx esi edi,
+    sourceStr: PTR BYTE,    ; Pointer to the source string
+    subString: PTR BYTE        ; Pointer to substring to find
+    
+    LOCAL sourceLen: DWORD,
+          subLen: DWORD,
+          pos: DWORD
+    
+    ; Get the length of both strings
+    mov esi, sourceStr
+    INVOKE Str_length, esi
+    mov sourceLen, eax
+     
+    mov esi, subString
+    INVOKE Str_length, esi
+    mov subLen, eax
+    
+    ; If substring is empty or longer than source, return 0 (not found)
+    .IF eax == 0 || eax > sourceLen
+        mov eax, 0
+        jmp done
+    .ENDIF
+    
+    ; Initialize position counter
+    mov pos, 0
+    
+    ; Set up pointers
+    mov esi, sourceStr
+    
+search_loop:
+    ; Check if we've reached the end of possible matches
+    mov eax, sourceLen
+    sub eax, subLen
+    .IF pos > eax
+        mov eax, 0      ; Not found, return 0
+        jmp done
+    .ENDIF
+    
+    ; Try to match substring at current position
+    mov edi, subString
+    mov ecx, subLen     ; Match length
+    mov ebx, pos        ; Get current position
+    mov edx, sourceStr
+    add edx, ebx        ; Point to current position in source
+    
+    push esi
+    push edi
+    mov esi, edx        ; Source pointer at current position
+    
+    ; Compare strings
+    repe cmpsb
+    
+    pop edi
+    pop esi
+    
+    ; If ECX is 0, then all characters matched
+    .IF ecx == 0
+        mov eax, pos    ; Return the position where substring was found
+        inc eax         ; Convert to 1-based index
+        jmp done
+    .ENDIF
+    
+    ; Move to next position in source
+    inc pos
+    jmp search_loop
+    
+done:
+    ret
+Str_find ENDP
 
-    LOCAL temp_result[32]:BYTE    ; buffer for temporary result
-    LOCAL final_result[34]:BYTE   ; buffer for final result with decimal point
+;------------------------------------------------------------------------
+; This module validates and formats decimal transaction input
+; Receives : The address / pointer of the transactionAmount variable
+; Returns : Set carry flag if invalid, Clear if valid
+;           Formats the input for use with addDecimal (without decimal point)
+; Last update: 7/4/2025
+;------------------------------------------------------------------------
+.data
+    invalidDecimalMsg BYTE "Invalid decimal format. Please use format like 1000.56", NEWLINE, 0
+    tooManyDecimalsMsg BYTE "Please enter no more than 2 decimal places.", NEWLINE, 0
+    tempInputBuffer BYTE 32 DUP(0)    ; Temporary buffer for formatting
     
-    ; Get lengths of strings
-    INVOKE Str_length, decimal_one
-    mov ecx, eax                  ; length of first string in ECX
+.code
+validateDecimalInput PROC,
+    inputAddress: PTR BYTE
     
-    ; Initialize buffers
-    lea edi, temp_result
+    LOCAL hasDecimal: BYTE        ; Flag for decimal point found
+    LOCAL decimalCount: BYTE      ; Count of digits after decimal
+    LOCAL resultBuffer[32]: BYTE  ; Buffer for formatted result
+    
+    pushad
+    
+    ; Initialize local variables
+    mov hasDecimal, 0
+    mov decimalCount, 0
+    
+    ; Clear result buffer
+    lea edi, resultBuffer
+    mov ecx, 32
     mov al, 0
-    mov [edi + ecx + 1], al       ; null-terminate temp_result
+    rep stosb
     
-    ; Start at the last digit position
-    mov esi, ecx
-    dec esi                       ; last character index
-    mov edi, ecx                  ; result position
-    mov bl, 0                     ; set carry value to zero
+    ; Get input string length
+    INVOKE Str_length, inputAddress
+    mov ecx, eax                  ; Length in ECX
     
-process_decimal: 
-    ; Process first decimal string
-    mov al, BYTE PTR [decimal_one + esi]
-    sub al, 30h                   ; convert from ASCII to binary
+    ; Validate characters and structure
+    mov esi, inputAddress         ; Source string
+    lea edi, resultBuffer    ; Destination buffer (without decimal point)
     
-    ; Process second decimal string (handle different string lengths)
-    INVOKE Str_length, decimal_two
-    mov edx, eax                  ; length of second string
+    xor edx, edx                  ; Counter for valid digits
     
-    cmp esi, edx
-    jge has_digit                 ; if within range of second string
-    mov ah, 0                     ; use 0 if beyond second string's length
-    jmp add_digits
+validate_char_loop:
+    mov al, [esi]                 ; Get current character
     
-has_digit:
-    mov ah, BYTE PTR [decimal_two + esi]
-    sub ah, 30h                   ; convert from ASCII to binary
+    ; Check for decimal point
+    cmp al, '.'
+    je process_decimal_point
     
-add_digits:
-    add al, ah                    ; add digits
-    add al, bl                    ; add carry
-    mov bl, 0                     ; reset carry
+    ; Check if it's a digit
+    cmp al, '0'
+    jl invalid_char
+    cmp al, '9'
+    jg invalid_char
     
-    cmp al, 10                    ; check if we need to carry
-    jl no_carry
-    sub al, 10                    ; adjust digit
-    mov bl, 1                     ; set carry
+    ; It's a valid digit, copy to result (without decimal point)
+    mov [edi], al
+    inc edi
+    inc edx                       ; Increment valid digit counter
     
-no_carry:
-    add al, 30h                   ; convert back to ASCII
-    mov BYTE PTR [temp_result + edi], al  ; store in result
+    ; Update decimal counter if we're past the decimal point
+    cmp hasDecimal, 1
+    jne next_char
+    inc decimalCount
     
-    dec esi                       ; move to next digit
-    dec edi
-    cmp esi, 0
-    jl done_addition              ; if we've processed all digits
-    jmp process_decimal           ; otherwise continue
+    ; Ensure max 2 digits after decimal
+    cmp decimalCount, 3
+    jge too_many_decimals
     
-done_addition:
-    ; Handle final carry if any
-    cmp bl, 0
-    je format_result
-    mov BYTE PTR [temp_result + edi], '1'
-    dec edi
-
-format_result:
-    ; Format the result with decimal point
-    INVOKE Str_length, ADDR temp_result
-    mov ecx, eax                  ; length of result
-    lea esi, temp_result
-    lea edi, final_result
-    xor edx, edx                  ; counter for characters processed
-    
-copy_loop:
-    mov al, [esi]                 ; get character from temp_result
-    mov [edi], al                 ; copy to final_result
+next_char:
     inc esi
-    inc edi
-    inc edx
+    loop validate_char_loop
+    jmp format_result
     
-    ; Check if we need to insert decimal point
-    mov bl, decimal_position
-    movzx ebx, bl                 ; zero-extend to 32 bits
-    mov eax, ecx
-    sub eax, edx                  ; remaining chars
-    cmp eax, ebx                  ; if remaining chars = decimal position
-    jne continue_copy
+process_decimal_point:
+    ; Check if we already found a decimal point
+    cmp hasDecimal, 1
+    je invalid_char               ; Multiple decimal points not allowed
     
-    ; Insert decimal point
-    mov BYTE PTR [edi], '.'
-    inc edi
+    mov hasDecimal, 1
+    inc esi
+    dec ecx
+    jmp validate_char_loop
     
-continue_copy:
-    cmp edx, ecx
-    jl copy_loop                  ; continue if not at end
+invalid_char:
+    INVOKE printString, ADDR invalidDecimalMsg
+    STC                           ; Set carry flag for error
+    jmp done
     
-    ; Null-terminate final result
+too_many_decimals:
+    INVOKE printString, ADDR tooManyDecimalsMsg
+    STC                           ; Set carry flag for error
+    jmp done
+    
+format_result:
+    ; Add null terminator to result
     mov BYTE PTR [edi], 0
     
-    ; Push address of result to stack for return
-    lea eax, final_result
+    ; If no decimal was entered, append "00"
+    cmp hasDecimal, 0
+    jne check_decimal_count
+    
+    ; Append "00" for cents
+    mov BYTE PTR [edi], '0'
+    inc edi
+    mov BYTE PTR [edi], '0'
+    inc edi
+    mov BYTE PTR [edi], 0
+    jmp copy_to_input
+    
+check_decimal_count:
+    ; Check if we need to pad with zeros
+    cmp decimalCount, 0
+    je add_two_zeros              ; No decimals entered after point (e.g., "100.")
+    cmp decimalCount, 1
+    je add_one_zero               ; One decimal entered (e.g., "100.5")
+    jmp copy_to_input             ; Two decimals entered (e.g., "100.56")
+    
+add_two_zeros:
+    mov BYTE PTR [edi], '0'
+    inc edi
+    mov BYTE PTR [edi], '0'
+    inc edi
+    mov BYTE PTR [edi], 0
+    jmp copy_to_input
+    
+add_one_zero:
+    mov BYTE PTR [edi], '0'
+    inc edi
+    mov BYTE PTR [edi], 0
+    
+copy_to_input:
+    ; Copy formatted result back to input address
+    INVOKE Str_copy, ADDR resultBuffer, inputAddress
+    
+    ; Clear carry flag to indicate success
+    CLC
+    
+done:
+    popad
+    ret
+validateDecimalInput ENDP
+
+;------------------------------------------------------------------------
+; This module handles conversion between string representations with decimal
+; points and the internal format needed for decimal arithmetic operations
+; Last update: 08/04/2025
+;------------------------------------------------------------------------
+.data
+    tempNumBuffer BYTE 32 DUP(0)
+    minusSign BYTE "-", 0
+    plusSign BYTE "+", 0
+
+.code
+;------------------------------------------------------------------------
+; Converts a string with decimal point to a string without decimal point
+; Receives: 
+;   - sourceStr: PTR to source string (e.g., "2500.12")
+;   - destStr: PTR to destination buffer
+; Returns:
+;   - destStr contains formatted string without decimal point (e.g., "250012")
+;------------------------------------------------------------------------
+removeDecimalPoint PROC,
+    sourceStr: PTR BYTE,
+    destStr: PTR BYTE
+    
+    LOCAL hasSign: BYTE
+    
+    pushad
+
+    ; Initialize sign status
+    mov hasSign, 0
+    
+    ; Point to source and destination
+    mov esi, sourceStr
+    mov edi, destStr
+    
+    ; Check if there's a sign at the beginning
+    mov al, [esi]
+    cmp al, '+'
+    je handle_sign
+    cmp al, '-'
+    jne copy_loop
+    
+handle_sign:
+    ; Store the sign in the destination
+    mov [edi], al
+    inc edi
+    inc esi
+    mov hasSign, 1
+    
+copy_loop:
+    ; Get current character
+    mov al, [esi]
+    
+    ; Check if end of string
+    cmp al, 0
+    je done
+    
+    ; Check if decimal point
+    cmp al, '.'
+    je skip_decimal
+    
+    ; Copy character to destination
+    mov [edi], al
+    inc edi
+    
+skip_decimal_continue:
+    inc esi
+    jmp copy_loop
+    
+skip_decimal:
+    inc esi
+    jmp copy_loop
+    
+done:
+    ; Null-terminate the destination string
+    mov BYTE PTR [edi], 0
+
+    popad
+    ret
+removeDecimalPoint ENDP
+
+;------------------------------------------------------------------------
+; Converts a string without decimal point to a string with decimal point
+; Receives: 
+;   - sourceStr: PTR to source string (e.g., "250012")
+;   - destStr: PTR to destination buffer
+; Returns:
+;   - destStr contains formatted string with decimal point (e.g., "2500.12")
+;------------------------------------------------------------------------
+addDecimalPoint PROC,
+    sourceStr: PTR BYTE,
+    destStr: PTR BYTE
+    
+    LOCAL sourceLength: DWORD
+    LOCAL hasSign: BYTE
+    
+    pushad
+
+    ; Initialize sign status
+    mov hasSign, 0
+    
+    ; Get string length
+    INVOKE Str_length, sourceStr
+    mov sourceLength, eax
+    
+    ; Check if string has a sign
+    mov esi, sourceStr
+    mov al, [esi]
+    cmp al, '+'
+    je has_sign
+    cmp al, '-'
+    jne no_sign
+    
+has_sign:
+    mov hasSign, 1
+    dec sourceLength    ; Adjust length for the sign
+    
+no_sign:
+    ; Point to destination
+    mov edi, destStr
+    
+    ; If there's a sign, copy it first
+    .IF hasSign == 1
+        mov al, [esi]
+        mov [edi], al
+        inc esi
+        inc edi
+    .ENDIF
+    
+    ; Check if we need to add leading zero for values less than 1
+    .IF sourceLength < 3
+        mov BYTE PTR [edi], '0'
+        inc edi
+        mov BYTE PTR [edi], '.'
+        inc edi
+        
+        ; Add leading zeros if needed
+        .IF sourceLength == 1
+            mov BYTE PTR [edi], '0'
+            inc edi
+        .ENDIF
+        
+        ; Copy rest of digits
+        mov ecx, sourceLength
+        rep movsb
+    .ELSE
+        ; Calculate position for decimal point
+        mov ecx, sourceLength
+        sub ecx, 2    ; Position before last two digits
+        
+        ; Copy digits before decimal point
+        mov ebx, ecx
+        rep movsb
+        
+        ; Add decimal point
+        mov BYTE PTR [edi], '.'
+        inc edi
+        
+        ; Copy last two digits
+        mov ecx, 2
+        rep movsb
+    .ENDIF
+    
+    ; Null-terminate the destination string
+    mov BYTE PTR [edi], 0
+
+    popad
+    ret
+addDecimalPoint ENDP
+
+;------------------------------------------------------------------------
+; Processes a transaction amount from the transaction log
+; Receives:
+;   - transactionAmount: PTR to transaction amount string (e.g., "+852.33" or "-723.45")
+;   - formattedAmount: PTR to output buffer (for formatted amount without decimal)
+; Returns:
+;   - formattedAmount contains the amount without decimal point
+;   - AL contains the operation ('+' or '-')
+;------------------------------------------------------------------------
+processTransactionAmount PROC USES ebx ecx edx esi edi,
+    transactionAmount: PTR BYTE,
+    formattedAmount: PTR BYTE
+    
+    ; Initialize
+    mov esi, transactionAmount
+    mov edi, formattedAmount
+    
+    ; Check first character for sign
+    mov al, [esi]
+    
+    ; Store the operation
+    mov bl, al
+    
+    ; Skip the sign in the input
+    inc esi
+    
+    ; Process the rest of the string (remove decimal point)
+    mov ecx, 0    ; Initialize counter
+    
+copy_digits:
+    mov al, [esi]
+    
+    ; Check if end of string
+    cmp al, 0
+    je add_padding
+    
+    ; Check if decimal point
+    cmp al, '.'
+    je skip_point
+    
+    ; Copy digit to output
+    mov [edi], al
+    inc edi
+    inc ecx
+    
+next_digit:
+    inc esi
+    jmp copy_digits
+    
+skip_point:
+    inc esi
+    jmp copy_digits
+    
+add_padding:
+    ; Check if we need to add padding zeros
+    cmp ecx, 0
+    je add_zeros
+    
+    ; If we have fewer than 2 digits after decimal point, add zeros
+    mov al, 0    ; Null-terminate
+    mov [edi], al
+    
+    ; Return the operation sign in AL
+    mov al, bl
+    ret
+    
+add_zeros:
+    ; Add zeros if needed
+    mov BYTE PTR [edi], '0'
+    inc edi
+    mov BYTE PTR [edi], '0'
+    inc edi
+    mov BYTE PTR [edi], 0
+    
+    ; Return the operation sign in AL
+    mov al, bl
+    ret
+processTransactionAmount ENDP
+
+;------------------------------------------------------------------------
+; A more comprehensive decimal arithmetic function that supports both
+; addition and subtraction of decimal numbers
+; Receives:
+;   - num1: PTR to first number (without decimal point)
+;   - num2: PTR to second number (without decimal point)
+;   - result: PTR to result buffer
+;   - operation: BYTE ('+' = addition, '-' = subtraction)
+; Returns:
+;   - result contains the formatted result string without decimal point
+;------------------------------------------------------------------------
+decimalArithmetic PROC USES eax ebx ecx edx esi edi,
+    num1: PTR BYTE,
+    num2: PTR BYTE,
+    result: PTR BYTE,
+    operation: BYTE
+    
+    LOCAL num1Val: DWORD
+    LOCAL num2Val: DWORD
+    LOCAL resultVal: DWORD
+    LOCAL isNegative: BYTE
+    
+    ; Initialize negative flag
+    mov isNegative, 0
+    
+    ; Check for signs in num1
+    mov esi, num1
+    mov al, [esi]
+    mov num1Val, 0
+    
+    cmp al, '+'
+    je positive_num1
+    cmp al, '-'
+    jne convert_num1
+    
+    ; Negative num1
+    inc esi        ; Skip the sign
+    
+positive_num1:
+    inc esi        ; Skip the sign
+    
+convert_num1:
+    ; Convert string to integer
+    push esi
+    INVOKE StringToInt, esi
+    mov num1Val, eax
+    pop esi
+    
+    ; If num1 was negative, negate value
+    .IF isNegative == 1
+        neg num1Val
+    .ENDIF
+    
+    ; Reset negative flag for num2
+    mov isNegative, 0
+    
+    ; Check for signs in num2
+    mov esi, num2
+    mov al, [esi]
+    mov num2Val, 0
+    
+    cmp al, '+'
+    je positive_num2
+    cmp al, '-'
+    jne convert_num2
+    
+    ; Negative num2
+    mov isNegative, 1
+    
+positive_num2:
+    inc esi        ; Skip the sign
+    
+convert_num2:
+    ; Convert string to integer
+    push esi
+    INVOKE StringToInt, esi
+    mov num2Val, eax
+    pop esi
+    
+    ; Perform arithmetic based on operation
+    mov eax, num1Val
+    
+    cmp operation, '+'
+    jne subtract_operation
+    
+    ; Addition
+    add eax, num2Val
+    jmp format_result
+    
+subtract_operation:
+    ; Subtraction
+    sub eax, num2Val
+    
+format_result:
+    ; Check if result is negative
+    mov isNegative, 0
+    cmp eax, 0
+    jge positive_result
+    
+    ; Handle negative result
+    mov isNegative, 1
+    neg eax
+    
+positive_result:
+    ; eax now contains absolute value of result
+    mov resultVal, eax
+    
+    ; Convert to string
+    mov edi, result
+    
+    ; Add sign if negative
+    .IF isNegative == 1
+        mov BYTE PTR [edi], '-'
+        inc edi
+    .ENDIF
+    
+    ; Convert integer to string
+    mov eax, resultVal
+    call IntToString
     
     ret
-addDecimal ENDP
+decimalArithmetic ENDP
 END
