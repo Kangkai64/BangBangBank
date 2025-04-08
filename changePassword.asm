@@ -44,7 +44,7 @@ confirmPassword     BYTE 50 DUP(?)
 new_hashed_password BYTE 255 DUP(?)
 
 .code
-changeCredentials PROC,
+changePassword PROC,
 	user: PTR userCredential
 	
 	call Clrscr
@@ -192,5 +192,5 @@ exitChangeCredentials:
 	STC ; Don't logout the user
 	ret
 
-changeCredentials ENDP
+changePassword ENDP
 END

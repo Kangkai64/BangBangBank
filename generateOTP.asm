@@ -10,6 +10,7 @@ otpDirPath            BYTE "GeneratedOTP\", 0
 otpFilePrefix         BYTE "GeneratedOTP\otp_", 0
 otpFileSuffix         BYTE ".txt", 0
 otpFilePath           BYTE 256 DUP(0)  ; Increased buffer size for safety
+
 ; OTP variables
 otpBuffer             BYTE 16 DUP(0)   ; Initialize with zeros for safety
 otpPrefix             BYTE "OTP-", 0
@@ -96,51 +97,23 @@ generateDigits:
     push edi
     push esi
 
-    ; Copy directory path
+    ; Build OTP file path
+    lea esi, otpFilePrefix
     lea edi, otpFilePath
-    lea esi, otpDirPath
-copyDirPath:
-    mov al, [esi]
-    mov [edi], al
-    inc esi
-    inc edi
-    cmp al, 0
-    jne copyDirPath
-    dec edi  ; Back up over null
+    INVOKE Str_copy, esi, edi
 
-    ; Add "otp" part
-    mov BYTE PTR [edi], 'o'
-    inc edi
-    mov BYTE PTR [edi], 't'
-    inc edi
-    mov BYTE PTR [edi], 'p'
-    inc edi
-    mov BYTE PTR [edi], '_'
-    inc edi
+    INVOKE Str_length, edi
+    add edi, eax
 
-    ; Copy customer ID
-    mov ebx, account
-    add ebx, OFFSET userAccount.customer_id
-    mov esi, ebx
-copyCustomerID:
-    mov al, [esi]
-    mov [edi], al
-    inc esi
-    inc edi
-    cmp al, 0
-    jne copyCustomerID
-    dec edi  ; Back up over null
+    mov esi, account
+    add esi, OFFSET userAccount.customer_id
+    INVOKE Str_copy, esi, edi
 
-    ; Add file extension
-    mov BYTE PTR [edi], '.'
-    inc edi
-    mov BYTE PTR [edi], 't'
-    inc edi
-    mov BYTE PTR [edi], 'x'
-    inc edi
-    mov BYTE PTR [edi], 't'
-    inc edi
-    mov BYTE PTR [edi], 0
+    INVOKE Str_length, edi
+    add edi, eax
+
+    lea esi, otpFileSuffix
+    INVOKE Str_copy, esi, edi
 
     pop esi
     pop edi

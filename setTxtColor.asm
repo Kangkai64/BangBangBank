@@ -22,6 +22,9 @@ setTxtColor PROC,
 	.ELSEIF colorMode == DATE
 		mov eax, DATE_COLOR_CODE
 		call SetTextColor
+	.ELSEIF colorMode == LOGO
+		mov eax, LOGO_COLOR_CODE
+		call SetTextColor
 	.ELSEIF colorMode == INPUT
 		mov eax, INPUT_COLOR_CODE
 		call SetTextColor

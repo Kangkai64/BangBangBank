@@ -32,10 +32,6 @@ verifyOTP PROC USES ebx ecx edx esi edi,
     mov otpAttemptCount, 3
     
     otpVerificationLoop:
-        ; DEBUG: Show what OTP we're expecting
-        ;INVOKE printString, ADDR otpDebugMsg
-        ;INVOKE printString, ADDR otpTempBuffer
-        ;call Crlf
         
         ; Prompt user for OTP
         INVOKE printString, ADDR otpPromptMsg
@@ -43,12 +39,9 @@ verifyOTP PROC USES ebx ecx edx esi edi,
         ; Use ReadString to get user input
         lea edx, otpInputBuffer
         mov ecx, SIZEOF otpInputBuffer - 1  ; Leave room for null terminator
+        INVOKE setTxtColor, DEFAULT_COLOR_CODE, INPUT
         call ReadString
-        
-        ; DEBUG: Show what the user entered
-        ;INVOKE printString, ADDR otpInputMsg
-        ;INVOKE printString, ADDR otpInputBuffer
-        ;call Crlf
+        INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
 
         ; Check if OTP has expired (60 seconds = 60,000 milliseconds)
         INVOKE GetTickCount

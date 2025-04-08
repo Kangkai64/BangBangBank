@@ -48,6 +48,7 @@ displayMainMenu PROC
 	mov BYTE PTR [edi], 0
 
 	; Display the main menu
+	INVOKE displayLogo
 	INVOKE printString, ADDR dateHeader
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
 	INVOKE printString, ADDR timeDate

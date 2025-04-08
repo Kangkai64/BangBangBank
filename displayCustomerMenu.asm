@@ -22,7 +22,7 @@ customerMenuChoice BYTE NEWLINE,
 					"1. Transfer", NEWLINE,
 					"2. Deposit", NEWLINE,
 					"3. Monthly Statement", NEWLINE,
-					"4. Change Credentials", NEWLINE,
+					"4. Change Password", NEWLINE,
 					"5. Switch Account", NEWLINE,
 					"9. Logout", NEWLINE, NEWLINE, 0
 
@@ -69,10 +69,12 @@ displayCustomerMenu PROC,
 		INVOKE checkInterest, ADDR account
 		mov eax, 1
 		mov DWORD PTR interestFlag, eax
+		call Clrscr
 	.ENDIF
 	
 
 	; Display the main menu
+	INVOKE displayLogo
 	INVOKE printString, ADDR dateHeader
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
 	INVOKE printString, ADDR timeDate
@@ -92,12 +94,11 @@ displayCustomerMenu PROC,
 	.ELSEIF al == 1
 		INVOKE processTransaction, ADDR account
 	.ELSEIF al == 2
-		STC ; Don't logout the user, remove it when function is ready
-		;call aboutUs
+		INVOKE processDeposit, ADDR account
 	.ELSEIF al == 3
         INVOKE printMonthlyStatement, ADDR account
 	.ELSEIF al == 4
-		INVOKE changeCredentials, user
+		INVOKE changePassword, user
 	.ELSEIF al == 5
 		STC ; Don't logout the user, remove it when function is ready
 		;call switchAccount

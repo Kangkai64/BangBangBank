@@ -130,11 +130,38 @@ DwordToStr PROTO,
     dwordVal: DWORD,
     stringVal: PTR BYTE
 
+Str_find PROTO,
+    sourceStr: PTR BYTE,
+    subString: PTR BYTE
+
+validateDecimalInput PROTO,
+    inputAddress: PTR BYTE
+
+removeDecimalPoint PROTO,
+    sourceStr: PTR BYTE,
+    destStr: PTR BYTE
+
+addDecimalPoint PROTO,
+    sourceStr: PTR BYTE,
+    destStr: PTR BYTE
+
+processTransactionAmount PROTO,
+    transactionAmount: PTR BYTE,
+    formattedAmount: PTR BYTE
+
+decimalArithmetic PROTO,
+    num1: PTR BYTE,
+    num2: PTR BYTE,
+    result: PTR BYTE,
+    operation: BYTE
+
 ;-------------------------
 ; Procedure Prototype
 ;-------------------------
 printString PROTO,
 	textAddress: DWORD
+
+displayLogo PROTO
 
 displayMainMenu PROTO
 
@@ -147,6 +174,18 @@ Wait_Msg PROTO
 setTxtColor PROTO,
     colorCode: BYTE,
 	colorMode: BYTE
+
+;-------------------------
+; colorMode values
+;-------------------------
+DATE               EQU 1
+LOGO               EQU 2
+INPUT              EQU 3
+CUSTOM             EQU 9
+DEFAULT_COLOR_CODE EQU 07h ; White foreground and black background
+DATE_COLOR_CODE    EQU (yellow + (black SHL 4))
+LOGO_COLOR_CODE    EQU (lightblue + (black SHL 4))
+INPUT_COLOR_CODE   EQU (lightGreen + (black SHL 4))
 
 login PROTO
 
@@ -205,11 +244,28 @@ validatePassword PROTO,
     hashedPassword: PTR BYTE,
     encryptionKey: PTR BYTE
 
+changePassword PROTO,
+    user: PTR userCredential
+
 validatePasswordComplexity PROTO, 
     pPassword:PTR BYTE
 
+updateFile PROTO,
+    fileType:DWORD,
+    recordPtr:PTR BYTE,
+    keyFieldOffset:DWORD
+
 updateUserFile PROTO,
     user: PTR userCredential
+
+updateUserAccountFile PROTO,
+    account: PTR userAccount
+
+updateTransactionLog PROTO,
+    transaction: PTR userTransaction
+
+insertTransaction PROTO,
+    transaction: PTR userTransaction
 
 resetLoginAttempt PROTO,
     user: PTR userCredential
@@ -219,6 +275,14 @@ printUserCredentials PROTO,
 
 printUserAccount PROTO, 
     account: PTR userAccount, printMode: DWORD
+
+;-------------------------
+; printMode values
+;-------------------------
+PRINTMODE_ALL               EQU 0
+PRINTMODE_ACCOUNT_NUMBER    EQU 1
+PRINTMODE_FULLNAME          EQU 2
+PRINTMODE_BALANCE           EQU 3
 
 printUserTransaction PROTO, 
     transaction: PTR userTransaction
@@ -232,28 +296,10 @@ generateTransactionID PROTO,
 verifyOTP PROTO,
     generatedOTP: PTR BYTE 
 
-;-------------------------
-; colorMode values
-;-------------------------
-DATE               EQU 1
-INPUT              EQU 2
-CUSTOM             EQU 9
-DEFAULT_COLOR_CODE EQU 07h ; White foreground and black background
-DATE_COLOR_CODE    EQU (yellow + (black SHL 4))
-INPUT_COLOR_CODE   EQU (lightGreen + (black SHL 4))
-
-;-------------------------
-; pritnMode values
-;-------------------------
-PRINTMODE_ALL               EQU 0
-PRINTMODE_ACCOUNT_NUMBER    EQU 1
-PRINTMODE_FULLNAME          EQU 2
-PRINTMODE_BALANCE           EQU 3
+processDeposit PROTO,
+    account: PTR userAccount
 
 switchAccount PROTO
-
-changeCredentials PROTO,
-    user: PTR userCredential
 
 printMonthlyStatement PROTO,
 	account: PTR userAccount
@@ -263,14 +309,9 @@ MSnote PROTO
 calculateTotal PROTO,
 	transaction: PTR userTransaction
 
-addDecimal PROTO,
-    decimal_one: PTR BYTE,
-    decimal_two: PTR BYTE,
-    decimal_position: BYTE
-.LIST
-
 removeDecimalPoint PROTO,
 	pString: PTR BYTE
 
 removeSign PROTO,
 	pString: PTR BYTE
+.LIST

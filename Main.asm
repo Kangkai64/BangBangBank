@@ -25,6 +25,8 @@ main PROC
 		.ENDIF
 		jc mainMenu
 
+	call Clrscr
+	INVOKE displayLogo
 	call Crlf
 	exit
 main ENDP
