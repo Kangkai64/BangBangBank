@@ -155,6 +155,16 @@ decimalArithmetic PROTO,
     result: PTR BYTE,
     operation: BYTE
 
+decimalMultiply PROTO,
+    num1: PTR BYTE,
+    num2: PTR BYTE,
+    result: PTR BYTE
+
+decimalDivide PROTO,
+    num1: PTR BYTE,
+    num2: PTR BYTE,
+    result: PTR BYTE
+
 ;-------------------------
 ; Procedure Prototype
 ;-------------------------
