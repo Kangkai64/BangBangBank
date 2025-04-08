@@ -1564,10 +1564,9 @@ decimalArithmetic PROC USES eax ebx ecx edx esi edi,
     cmp al, '+'
     je positive_num1
     cmp al, '-'
-    jne convert_num1
-    
     ; Negative num1
-    inc esi        ; Skip the sign
+    mov isNegative, 1
+    jne convert_num1
     
 positive_num1:
     inc esi        ; Skip the sign
@@ -1595,10 +1594,11 @@ convert_num1:
     cmp al, '+'
     je positive_num2
     cmp al, '-'
-    jne convert_num2
-    
     ; Negative num2
     mov isNegative, 1
+    jne convert_num2
+    
+    
     
 positive_num2:
     inc esi        ; Skip the sign
@@ -1610,6 +1610,11 @@ convert_num2:
     mov num2Val, eax
     pop esi
     
+    ; If num1 was negative, negate value
+    .IF isNegative == 1
+        neg num2Val
+    .ENDIF
+
     ; Perform arithmetic based on operation
     mov eax, num1Val
     
@@ -1653,4 +1658,249 @@ positive_result:
     
     ret
 decimalArithmetic ENDP
+
+;------------------------------------------------------------------------
+; Decimal multiplication function
+; Multiplies two decimal numbers represented as strings
+; Receives:
+;   - num1: PTR to first number (without decimal point)
+;   - num2: PTR to second number (without decimal point)
+;   - result: PTR to result buffer
+; Returns:
+;   - result contains the formatted result string without decimal point
+;------------------------------------------------------------------------
+decimalMultiply PROC USES eax ebx ecx edx esi edi,
+    num1: PTR BYTE,
+    num2: PTR BYTE,
+    result: PTR BYTE
+    
+    LOCAL num1Val: DWORD
+    LOCAL num2Val: DWORD
+    LOCAL resultVal: DWORD
+    LOCAL isNegative: BYTE
+    
+    ; Initialize negative flag
+    mov isNegative, 0
+    
+    ; Check for signs in num1
+    mov esi, num1
+    mov al, [esi]
+    mov num1Val, 0
+    
+    cmp al, '+'
+    je positive_num1
+    cmp al, '-'
+    jne check_num1_done
+    
+    ; Negative num1
+    mov isNegative, 1
+    inc esi        ; Skip the sign
+    jmp convert_num1
+    
+positive_num1:
+    inc esi        ; Skip the sign
+    
+check_num1_done:
+    
+convert_num1:
+    ; Convert string to integer
+    push esi
+    INVOKE StringToInt, esi
+    mov num1Val, eax
+    pop esi
+    
+    ; Check for signs in num2
+    mov esi, num2
+    mov al, [esi]
+    mov num2Val, 0
+    
+    cmp al, '+'
+    je positive_num2
+    cmp al, '-'
+    jne check_num2_done
+    
+    ; Negative num2 - toggle isNegative
+    .IF isNegative == 1
+        mov isNegative, 0    ; Two negatives make a positive
+    .ELSE
+        mov isNegative, 1    ; One negative makes result negative
+    .ENDIF
+    inc esi        ; Skip the sign
+    jmp convert_num2
+    
+positive_num2:
+    inc esi        ; Skip the sign
+    
+check_num2_done:
+    
+convert_num2:
+    ; Convert string to integer
+    push esi
+    INVOKE StringToInt, esi
+    mov num2Val, eax
+    pop esi
+    
+    ; Perform multiplication
+    mov eax, num1Val
+    mov ebx, num2Val
+    mul ebx         ; EDX:EAX = EAX * EBX
+    
+    ; For simplicity, we'll assume the result fits in EAX
+    ; In a real implementation, you'd need to handle overflow
+    
+    ; Check if result is negative based on sign flag
+    .IF isNegative == 1
+        neg eax     ; Negate the result if needed
+    .ENDIF
+    
+    mov resultVal, eax
+    
+    ; Convert to string
+    mov edi, result
+    
+    ; Add sign if negative
+    .IF isNegative == 1
+        mov BYTE PTR [edi], '-'
+        inc edi
+    .ENDIF
+    
+    ; Convert integer to string
+    mov eax, resultVal
+    call IntToString
+    
+    ret
+decimalMultiply ENDP
+
+;------------------------------------------------------------------------
+; Decimal division function
+; Divides two decimal numbers represented as strings
+; Receives:
+;   - num1: PTR to first number (dividend, without decimal point)
+;   - num2: PTR to second number (divisor, without decimal point)
+;   - result: PTR to result buffer
+; Returns:
+;   - result contains the formatted result string without decimal point
+;   - EAX contains 0 if successful, 1 if division by zero attempted
+;------------------------------------------------------------------------
+decimalDivide PROC USES ebx ecx edx esi edi,
+    num1: PTR BYTE,
+    num2: PTR BYTE,
+    result: PTR BYTE
+    
+    LOCAL num1Val: DWORD
+    LOCAL num2Val: DWORD
+    LOCAL resultVal: DWORD
+    LOCAL isNegative: BYTE
+    LOCAL remainder: DWORD
+    
+    ; Initialize negative flag
+    mov isNegative, 0
+    
+    ; Check for signs in num1
+    mov esi, num1
+    mov al, [esi]
+    mov num1Val, 0
+    
+    cmp al, '+'
+    je positive_num1
+    cmp al, '-'
+    jne check_num1_done
+    
+    ; Negative num1
+    mov isNegative, 1
+    inc esi        ; Skip the sign
+    jmp convert_num1
+    
+positive_num1:
+    inc esi        ; Skip the sign
+    
+check_num1_done:
+    
+convert_num1:
+    ; Convert string to integer
+    push esi
+    INVOKE StringToInt, esi
+    mov num1Val, eax
+    pop esi
+    
+    ; Check for signs in num2
+    mov esi, num2
+    mov al, [esi]
+    mov num2Val, 0
+    
+    cmp al, '+'
+    je positive_num2
+    cmp al, '-'
+    jne check_num2_done
+    
+    ; Negative num2 - toggle isNegative
+    .IF isNegative == 1
+        mov isNegative, 0    ; Two negatives make a positive
+    .ELSE
+        mov isNegative, 1    ; One negative makes result negative
+    .ENDIF
+    inc esi        ; Skip the sign
+    jmp convert_num2
+    
+positive_num2:
+    inc esi        ; Skip the sign
+    
+check_num2_done:
+    
+convert_num2:
+    ; Convert string to integer
+    push esi
+    INVOKE StringToInt, esi
+    mov num2Val, eax
+    pop esi
+    
+    ; Check for division by zero
+    cmp eax, 0
+    jne perform_division
+    
+    ; Handle division by zero
+    mov edi, result
+    mov BYTE PTR [edi], 'E'  ; Error indicator
+    mov BYTE PTR [edi+1], 'r'
+    mov BYTE PTR [edi+2], 'r'
+    mov BYTE PTR [edi+3], 'o'
+    mov BYTE PTR [edi+4], 'r'
+    mov BYTE PTR [edi+5], 0   ; Null terminator
+    mov eax, 1               ; Return error code
+    jmp division_done
+    
+perform_division:
+    ; Perform division
+    mov eax, num1Val
+    mov ebx, num2Val
+    mov edx, 0               ; Clear EDX for division
+    div ebx                  ; EAX = quotient, EDX = remainder
+    
+    mov resultVal, eax
+    mov remainder, edx       ; Store remainder if needed for further processing
+    
+    ; Check if result is negative based on sign flag
+    .IF isNegative == 1
+        neg eax     ; Negate the result if needed
+        mov resultVal, eax
+    .ENDIF
+    
+    ; Convert to string
+    mov edi, result
+    
+    ; Add sign if negative
+    .IF isNegative == 1
+        mov BYTE PTR [edi], '-'
+        inc edi
+    .ENDIF
+    
+    ; Convert integer to string
+    mov eax, resultVal
+    call IntToString
+    
+    mov eax, 0               ; Return success code
+    
+division_done:
+    ret
+decimalDivide ENDP
 END

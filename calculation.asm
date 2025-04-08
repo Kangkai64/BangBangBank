@@ -4,6 +4,7 @@ INCLUDE BangBangBank.inc
 totalCredit   BYTE 32 DUP('0'), 0  ; Buffer for storing credit total as string
 totalDebit    BYTE 32 DUP('0'), 0  ; Buffer for storing debit total as string
 tempAmount    BYTE 32 DUP(0)       ; Temporary buffer for processing amounts
+decimalPointChar BYTE ".", 0
 .code
 ;----------------------------------------------------------------------
 ; This module calculates the total of all user transactions
@@ -23,12 +24,9 @@ process_credit:
 
     ; Copy and remove decimal point from the amount
     INVOKE Str_copy, esi, ADDR tempAmount
-    ; INVOKE removeDecimalPoint, ADDR tempAmount
-     ; Remove sign from the amount
-    INVOKE removeSign, ADDR tempAmount
+    INVOKE removeDecimalPoint, ADDR tempAmount, ADDR tempAmount
+    INVOKE decimalArithmetic, ADDR tempAmount, ADDR totalCredit, ADDR totalCredit, '+'
     
-    ; Copy result to totalCredit
-    INVOKE Str_copy, eax, ADDR totalCredit
     
     ; Display the result for debugging
     INVOKE printString, ADDR totalCredit
@@ -38,45 +36,4 @@ done:
     popad
     ret
 calculateTotal ENDP
-
-;----------------------------------------------------------------------
-; Removes the sign (+ or -) from the beginning of a string
-; Receives: Pointer to a string that may have a sign
-; Returns: Original string modified with sign removed
-;----------------------------------------------------------------------
-removeSign PROC,
-    pString: PTR BYTE
-    
-    push esi
-    push edi
-    
-    ; Get string pointer
-    mov esi, pString
-    
-    ; Check if first character is a sign
-    mov al, [esi]
-    cmp al, '+'
-    je remove_sign
-    cmp al, '-'
-    je remove_sign
-    jmp done    ; No sign to remove
-    
-remove_sign:
-    ; Shift everything left by one character to remove the sign
-    mov edi, esi
-    
-shift_loop:
-    inc esi
-    mov al, [esi]
-    mov [edi], al
-    inc edi
-    cmp al, 0       ; Check for end of string
-    jne shift_loop
-    
-done:
-    INVOKE printString, pString
-    pop edi
-    pop esi
-    ret
-removeSign ENDP
 END
