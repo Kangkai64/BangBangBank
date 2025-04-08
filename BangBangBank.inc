@@ -230,6 +230,9 @@ inputFromFile PROTO,
 inputFromAccount PROTO,
     account: PTR userAccount
 
+inputFromAccountByAccNo PROTO,
+    recipientAccount: PTR userAccount
+
 validateRecipientAcc PROTO,
     Account: PTR userAccount
 
@@ -249,6 +252,10 @@ changePassword PROTO,
 
 validatePasswordComplexity PROTO, 
     pPassword:PTR BYTE
+
+validateTransactionAmount PROTO,
+    inputTransactionAmountAddress: PTR BYTE,
+    account: PTR userAccount
 
 updateFile PROTO,
     fileType:DWORD,

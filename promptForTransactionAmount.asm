@@ -11,10 +11,7 @@ INCLUDE BangBangBank.inc
 .data
     promptTransactionAmount BYTE "Enter transaction amount: ", 0
     invalidInputMsg BYTE "Invalid amount. Please enter a positive number.", NEWLINE, 0
-    overflowMsg BYTE "Amount too large. Maximum allowed is 999,999,999.99.", NEWLINE, 0
-    notSufficientBalance BYTE "Not sufficient balance... ", NEWLINE, 0
     decimalPointChar BYTE ".", 0
-    transactionLimit BYTE 32 DUP(?)
     exceedTransactionLimit BYTE "Invalid amount! Exceeded transaction limit...", NEWLINE, 0
 
 .code
@@ -89,47 +86,6 @@ input_retry:
 
     ; Copy the original amount after the negative sign
     INVOKE Str_copy, inputTransactionAmountAddress, edi
-
-    ; Check whether exceed transaction limit
-    ; Convert transaction limit to numeric value first
-    mov esi, [account]
-    lea edi, [esi + OFFSET userAccount.transaction_limit]
-    INVOKE removeDecimalPoint, edi, ADDR transactionLimit
-
-    ; Compare transaction amount with transaction limit
-    INVOKE Str_compare, ADDR transactionLimit, inputTransactionAmountAddress
-
-    .IF CARRY?
-        INVOKE printString, ADDR exceedTransactionLimit
-        jmp input_retry
-    .ENDIF
-
-    ; Check whether user has enough balance
-    ; Convert account_balance to numeric value first
-    mov esi, [account]
-    lea esi, [esi + OFFSET userAccount.account_balance]
-    
-    INVOKE removeDecimalPoint, esi, ADDR formattedAccountBalance
-    INVOKE removeDecimalPoint, ADDR formattedTransAmount, ADDR tempBuffer
-    
-    ; Compare transaction amount with account balance
-    ; We'll use decimalArithmetic with subtraction to see if result is negative
-    INVOKE decimalArithmetic, ADDR formattedAccountBalance, ADDR tempBuffer, ADDR tempBuffer, '-'
-    
-    ; Check if first character of result is '-' (negative)
-    lea esi, tempBuffer
-    mov al, [esi]
-    cmp al, '-'
-    je insufficient_balance
-
-    ; Clear carry flag to indicate success
-    CLC
-    jmp done
-    
-insufficient_balance:
-    INVOKE printString, ADDR notSufficientBalance
-    call Wait_Msg
-    STC     ; Set carry flag to indicate failure
     
 done:
     popad

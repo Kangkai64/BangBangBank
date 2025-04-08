@@ -76,12 +76,17 @@ processTransaction PROC,
         STC
         jmp done
     .ENDIF
-    ;prompt transaction amount
 
+    ; Store recipient account number into recipientAccount structure
+    mov esi, OFFSET inputRecipientAccNo
+    INVOKE Str_copy, esi, ADDR recipientAccount.account_number
+    
     ; Read user account from userAccount.txt
-	INVOKE inputFromAccount, ADDR recipientAccount
+	INVOKE inputFromAccountByAccNo, ADDR recipientAccount
 
+    ;prompt transaction amount
     INVOKE promptForTransactionAmount, OFFSET inputTransactionAmount, account
+    INVOKE validateTransactionAmount, OFFSET inputTransactionAmount, account
 
     jc done ; Invalid transaction amount
     ; confirm transaction
@@ -98,7 +103,8 @@ confirmTransaction:
 
     ; Print recipient's name
     INVOKE printString, ADDR recipientNameMsg
-    INVOKE printString, recipientAccount.full_name
+    INVOKE printString, ADDR recipientAccount.full_name
+    Call Crlf
 
     ; Print recipient's account
     INVOKE printString, ADDR recipientAccMsg

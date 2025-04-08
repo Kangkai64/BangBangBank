@@ -30,13 +30,13 @@
     <MASM Include="generateOTP.asm" />
     <MASM Include="generateTransactionId.asm" />
     <MASM Include="checkInterest.asm" />
-    <MASM Include="changeCredentials.asm" />
     <MASM Include="calculation.asm" />
     <MASM Include="validatePasswordComplexity.asm" />
     <MASM Include="verifyOTP.asm" />
     <MASM Include="processDeposit.asm" />
     <MASM Include="updateFile.asm" />
     <MASM Include="displayLogo.asm" />
+    <MASM Include="validateTransactionAmount.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />
