@@ -13,8 +13,13 @@ INCLUDE BangBangBank.inc
     invalidInputMsg BYTE "Invalid amount. Please enter a positive number.", NEWLINE, 0
     overflowMsg BYTE "Amount too large. Maximum allowed is 999,999,999.99.", NEWLINE, 0
     notSufficientBalance BYTE "Not sufficient balance... ", NEWLINE, 0
+<<<<<<< HEAD
     decimalPointChar BYTE ".", 0
     
+=======
+    exceedTransactionLimit BYTE "Invalid amount! Exceeded transaction limit...", NEWLINE, 0
+
+>>>>>>> 734e414c0d0bdac311ca959424ee6c1f31e0c01d
 .code
 promptForTransactionAmount PROC,
     inputTransactionAmountAddress: PTR BYTE,
@@ -131,7 +136,50 @@ validate_integer_loop:
     rep movsb
     mov BYTE PTR [edi], 0         ; Null-terminate
     
+<<<<<<< HEAD
     ; Get account balance and remove decimal point for comparison
+=======
+    ; Multiply existing value by 10 and add new digit
+    push eax
+    mov eax, edx
+    mul ebx
+    mov edx, eax
+    pop eax
+    movzx eax, al
+    add edx, eax
+    
+    ; Check for overflow (max 999,999,999)
+    .IF edx > 999999999
+        INVOKE printString, ADDR overflowMsg
+        jmp input_retry
+    .ENDIF
+    
+    ; Move to next character
+    inc esi
+    loop validate_loop
+
+    ; Check if input amount is zero
+    .IF edx == 0
+        INVOKE printString, ADDR invalidInputMsg
+        jmp input_retry
+    .ENDIF
+
+    ;check whether exceed transaction limit
+    ; Convert transaction limit to numeric value first
+    mov esi, [account]
+    lea edi, [esi + OFFSET userAccount.transaction_limit]
+    INVOKE StringToInt, edi
+    mov ecx, eax      ; Store transaction limit in ecx
+
+    ; Compare transaction amount with transaction limit
+    .IF edx > ecx
+        INVOKE printString, ADDR exceedTransactionLimit
+        jmp input_retry
+    .ENDIF
+
+    ;check whether enough balance
+    ; Convert account_balance to numeric value first
+>>>>>>> 734e414c0d0bdac311ca959424ee6c1f31e0c01d
     mov esi, [account]
     lea esi, [esi + OFFSET userAccount.account_balance]
     
@@ -139,6 +187,7 @@ validate_integer_loop:
     INVOKE removeDecimalPoint, ADDR formattedTransAmount, ADDR tempBuffer
     
     ; Compare transaction amount with account balance
+<<<<<<< HEAD
     ; We'll use decimalArithmetic with subtraction to see if result is negative
     INVOKE decimalArithmetic, ADDR formattedAccountBalance, ADDR tempBuffer, ADDR tempBuffer, '-'
     
@@ -149,6 +198,19 @@ validate_integer_loop:
     je insufficient_balance
     
     ; Balance is sufficient, clear carry flag to indicate success
+=======
+    .IF edx > ecx
+        INVOKE printString, ADDR notSufficientBalance
+        jmp input_retry
+    .ENDIF
+
+    ; Convert validated number back to string
+    mov eax, edx
+    mov edi, inputTransactionAmountAddress
+    call IntToString
+
+    ; Clear carry flag to indicate success
+>>>>>>> 734e414c0d0bdac311ca959424ee6c1f31e0c01d
     CLC
     jmp done
     
