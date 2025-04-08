@@ -268,3 +268,9 @@ addDecimal PROTO,
     decimal_two: PTR BYTE,
     decimal_position: BYTE
 .LIST
+
+removeDecimalPoint PROTO,
+	pString: PTR BYTE
+
+removeSign PROTO,
+	pString: PTR BYTE

@@ -203,10 +203,9 @@ printMonthlyStatement PROC,
 
     call CRLF
     Call MSnote
-    ; Wait for user input
-    call ReadChar
-    STC ; Don't logout the user
-    
+
+done:
+    STC ;Don't logout the user
     ret
 printMonthlyStatement ENDP
 
@@ -261,8 +260,11 @@ mov dl, 5
     mov dh, 49
     call Gotoxy
     INVOKE printString, ADDR menuContinue
-
+    
+    ; Exit monthly statement
+	call Wait_Msg
     popad
+    STC
     ret
 MSnote ENDP
 END
