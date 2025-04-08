@@ -309,7 +309,4 @@ MSnote PROTO
 calculateTotal PROTO, 
     transaction: PTR userTransaction
 
-removeSign PROTO,
-    pString: PTR BYTE
-
 .LIST
