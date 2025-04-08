@@ -306,12 +306,10 @@ printMonthlyStatement PROTO,
 
 MSnote PROTO
 
-calculateTotal PROTO,
-	transaction: PTR userTransaction
-
-removeDecimalPoint PROTO,
-	pString: PTR BYTE
+calculateTotal PROTO, 
+    transaction: PTR userTransaction
 
 removeSign PROTO,
-	pString: PTR BYTE
+    pString: PTR BYTE
+
 .LIST

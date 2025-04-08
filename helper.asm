@@ -583,11 +583,8 @@ copy_loop:
     mov [edi], al
     inc ebx
     inc edi
-    cmp al, 0
-    jne copy_loop
-    
-    ; Adjust EDI to point to the null terminator
-    dec edi
+    test al, al            ; Check for null terminator
+    jnz copy_loop
     
     ret
 IntToString ENDP
@@ -1147,7 +1144,7 @@ Str_find ENDP
 ; This module validates and formats decimal transaction input
 ; Receives : The address / pointer of the transactionAmount variable
 ; Returns : Set carry flag if invalid, Clear if valid
-;           Formats the input for use with addDecimal (without decimal point)
+;           Formats the input for use with decimalArithmetic (without decimal point)
 ; Last update: 7/4/2025
 ;------------------------------------------------------------------------
 .data
