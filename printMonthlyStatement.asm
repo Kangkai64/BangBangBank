@@ -201,8 +201,8 @@ printMonthlyStatement PROC,
     call Gotoxy
     INVOKE printString, ADDR singleLine
 
-    call CRLF
-    Call MSnote
+    call Crlf
+    call MSnote
 
 done:
     STC ;Don't logout the user
@@ -210,7 +210,9 @@ done:
 printMonthlyStatement ENDP
 
 MSnote PROC
-mov dl, 5
+
+    pushad
+    mov dl, 5
     mov dh, 37
     call Gotoxy
     INVOKE printString, ADDR note
@@ -264,7 +266,6 @@ mov dl, 5
     ; Exit monthly statement
 	call Wait_Msg
     popad
-    STC
     ret
 MSnote ENDP
 END

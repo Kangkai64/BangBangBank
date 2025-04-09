@@ -79,14 +79,6 @@ input_retry:
         jmp input_retry
     .ENDIF
     
-    ; Assume this is a withdrawal, so add '-' sign to transaction amount
-    lea edi, formattedTransAmount
-    mov BYTE PTR [edi], '-'       ; Add negative sign
-    inc edi                       ; Move to next position
-
-    ; Copy the original amount after the negative sign
-    INVOKE Str_copy, inputTransactionAmountAddress, edi
-    
 done:
     popad
     ret
