@@ -7,6 +7,7 @@ totalBalance    BYTE 32 DUP('0'), 0  ; Buffer for storing balance total as strin
 balanceCount    BYTE 32 DUP('0'), 0 ; Buffer for storing balance count as string
 averageBalance    BYTE 32 DUP('0'), 0  ; Buffer for storing average balance as string
 tempAmount    BYTE 32 DUP(0)       ; Temporary buffer for processing amounts
+lastBalanceForDate    BYTE 32 DUP(0)       ; Temporary buffer for processing amounts
 dateBuffer    BYTE 32 DUP('0'), 0  ; Buffer for storing date
 oldDateBuffer    BYTE 32 DUP('0'), 0  ; Buffer for storing date
 decimalPointChar BYTE ".", 0
@@ -81,8 +82,6 @@ process_total_balance:
     mov esi, transaction
     ; Get transaction amount pointer
     add esi, OFFSET userTransaction.balance
-    INVOKE decimalArithmetic, ADDR balanceCount,ADDR incremental, ADDR balanceCount, '+'
-    INVOKE printString, ADDR balanceCount
     ; Copy and remove decimal point from the amount
     INVOKE Str_copy, esi, ADDR tempAmount
     INVOKE removeDecimalPoint, ADDR tempAmount, ADDR tempAmount
@@ -93,7 +92,6 @@ done:
     
     ret
 calculateAverageBalance ENDP
-
 ;----------------------------------------------------------------------
 ; This module calculates the daily balance of all user transactions
 ; Receives : The address / pointer of the user transaction structure
@@ -106,18 +104,40 @@ calculateDailyAverageBalance PROC USES eax ebx ecx edx esi edi,
     
 check_date:
     mov esi, transaction
-    ; Get transaction amount pointer
+    ; Get transaction date pointer
     add esi, OFFSET userTransaction.date
     INVOKE Str_copy, esi, ADDR dateBuffer
-    INVOKE Str_compare, ADDR dateBuffer, ADDR oldDateBuffer
-    .IF !ZERO?
-            INVOKE Str_copy, ADDR dateBuffer, ADDR oldDateBuffer
-            INVOKE calculateAverageBalance, transaction
-      .ENDIF
+    
+    ; Compare with current date being processed
+    INVOKE Str_compare, ADDR oldDateBuffer, ADDR dateBuffer
+    .IF ZERO?
+        ; Same date - update the balance for this date
+        ; Get transaction balance pointer
+        mov esi, transaction
+        add esi, OFFSET userTransaction.balance
+        INVOKE Str_copy, esi, ADDR lastBalanceForDate
+    .ELSE
+        ; New date found - process the previous date's last balance (if any)
+        .IF dateBuffer[0] != 0  ; If not first record
+            ; Process the last balance from previous date
+            INVOKE decimalArithmetic, ADDR balanceCount, ADDR incremental, ADDR balanceCount, '+'
+            INVOKE printString, ADDR balanceCount
+            ; Copy and remove decimal point from the last balance of previous date
+            INVOKE Str_copy, ADDR lastBalanceForDate, ADDR tempAmount
+            INVOKE removeDecimalPoint, ADDR tempAmount, ADDR tempAmount
+            INVOKE decimalArithmetic, ADDR tempAmount, ADDR totalBalance, ADDR totalBalance, '+'
+            INVOKE decimalDivide, ADDR totalBalance, ADDR balanceCount, ADDR averageBalance
+        .ENDIF
+        
+        ; Update to new date and store its balance
+        INVOKE Str_copy, ADDR oldDateBuffer, ADDR dateBuffer
+        mov esi, transaction
+        add esi, OFFSET userTransaction.balance
+        INVOKE Str_copy, esi, ADDR lastBalanceForDate
+    .ENDIF
     
     jmp done
 done:    
-    
     ret
 calculateDailyAverageBalance ENDP
 

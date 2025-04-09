@@ -880,6 +880,7 @@ transactionNotFound:
     mov [esp+28], eax
     
 readTransactionFileExit:
+	INVOKE calculateAverageBalance, transaction
     INVOKE CloseHandle, fileHandle
     popad
     ret
