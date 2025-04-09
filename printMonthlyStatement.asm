@@ -160,11 +160,6 @@ printMonthlyStatement PROC,
 
     ; Transaction details
     call CRLF
-    INVOKE calculateTotal, ADDR transaction
-    call CRLF
-
-    ; Transaction details
-    call CRLF
     INVOKE inputFromTransaction, ADDR transaction
     call CRLF
 
@@ -173,14 +168,6 @@ printMonthlyStatement PROC,
     mov dh, 36
     call Gotoxy
     INVOKE printString, ADDR singleLine
-
-    INVOKE printString, ADDR break
-    INVOKE printString, ADDR totalCredit
-    call CRLF
-    
-    INVOKE printString, ADDR break
-    INVOKE printString, ADDR totalDebit
-    call CRLF
     
     INVOKE printString, ADDR break
     INVOKE printString, ADDR avgExpenses
@@ -210,6 +197,7 @@ done:
 printMonthlyStatement ENDP
 
 MSnote PROC
+pushad
 mov dl, 5
     mov dh, 37
     call Gotoxy
@@ -264,7 +252,6 @@ mov dl, 5
     ; Exit monthly statement
 	call Wait_Msg
     popad
-    STC
     ret
 MSnote ENDP
 END

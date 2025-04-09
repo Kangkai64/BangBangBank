@@ -12,9 +12,8 @@ decimalPointChar BYTE ".", 0
 ; Returns : Nothing
 ; Last update: 7/4/2025
 ;----------------------------------------------------------------------
-calculateTotal PROC, 
+calculateTotalCredit PROC, 
     transaction: PTR userTransaction
-    
     pushad
     
 process_credit:
@@ -26,14 +25,38 @@ process_credit:
     INVOKE Str_copy, esi, ADDR tempAmount
     INVOKE removeDecimalPoint, ADDR tempAmount, ADDR tempAmount
     INVOKE decimalArithmetic, ADDR tempAmount, ADDR totalCredit, ADDR totalCredit, '+'
-    
-    
-    ; Display the result for debugging
     INVOKE printString, ADDR totalCredit
+ 
     jmp done
     
 done:    
     popad
     ret
-calculateTotal ENDP
+calculateTotalCredit ENDP
+;----------------------------------------------------------------------
+; This module calculates the total of all user transactions
+; Receives : The address / pointer of the user transaction structure
+; Returns : Nothing
+; Last update: 7/4/2025
+;----------------------------------------------------------------------
+calculateTotalDebit PROC, 
+    transaction: PTR userTransaction
+    pushad
+    
+process_debit:
+    mov esi, transaction
+    ; Get transaction amount pointer
+    add esi, OFFSET userTransaction.amount
+
+    ; Copy and remove decimal point from the amount
+    INVOKE Str_copy, esi, ADDR tempAmount
+    INVOKE removeDecimalPoint, ADDR tempAmount, ADDR tempAmount
+    INVOKE decimalArithmetic, ADDR tempAmount, ADDR totalDebit, ADDR totalDebit, '+'
+    INVOKE printString, ADDR totalDebit
+    jmp done
+    
+done:    
+    popad
+    ret
+calculateTotalDebit ENDP
 END

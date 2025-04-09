@@ -49,8 +49,8 @@ inputUsername         BYTE 64 DUP(?)
 userCustomerID        BYTE 32 DUP(?)
 userAccountNumber     BYTE 32 DUP(?)
 fieldIndex            DWORD 0
-totalCredit           DWORD 0              
-totalDebit            DWORD 0 
+totalCredit   BYTE 32 DUP('0'), 0  ; Buffer for storing credit total as string
+totalDebit    BYTE 32 DUP('0'), 0  ; Buffer for storing debit total as string
 
 ; Error messages
 errorMsg              BYTE "Error: File cannot be opened or read", NEWLINE, 0
@@ -828,7 +828,7 @@ searchTransactionLoop:
         
             ; Parse all fields for this transaction
             INVOKE parseUserTransaction, transaction
-            INVOKE calculateTotal, transaction
+            INVOKE calculateTotalCredit, transaction
             INVOKE printUserTransaction, transaction
             jmp searchTransactionLoop
         .ENDIF
@@ -844,7 +844,7 @@ searchTransactionLoop:
         
             ; Parse all fields for this transaction
             INVOKE parseUserTransaction, transaction
-        
+            INVOKE calculateTotalDebit, transaction
             INVOKE printUserTransaction, transaction
             jmp searchTransactionLoop
         .ENDIF
