@@ -1564,9 +1564,10 @@ decimalArithmetic PROC USES eax ebx ecx edx esi edi,
     cmp al, '+'
     je positive_num1
     cmp al, '-'
+    jne convert_num1
+
     ; Negative num1
     mov isNegative, 1
-    jne convert_num1
     
 positive_num1:
     inc esi        ; Skip the sign
@@ -1594,11 +1595,10 @@ convert_num1:
     cmp al, '+'
     je positive_num2
     cmp al, '-'
+    jne convert_num2
+
     ; Negative num2
     mov isNegative, 1
-    jne convert_num2
-    
-    
     
 positive_num2:
     inc esi        ; Skip the sign

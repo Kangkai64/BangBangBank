@@ -44,7 +44,7 @@ validateTransactionAmount PROC,
     lea esi, [esi + OFFSET userAccount.account_balance]
     
     INVOKE removeDecimalPoint, esi, ADDR formattedAccountBalance
-    INVOKE removeDecimalPoint, ADDR formattedTransAmount, ADDR tempBuffer
+    INVOKE removeDecimalPoint, inputTransactionAmountAddress, ADDR tempBuffer
     
     ; Compare transaction amount with account balance
     ; We'll use decimalArithmetic with subtraction to see if result is negative
