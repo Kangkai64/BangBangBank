@@ -162,7 +162,8 @@ printMonthlyStatement PROC,
     call CRLF
     INVOKE inputFromTransaction, ADDR transaction
     call CRLF
-
+    call printTotal
+    call CRLF
     ; Single line
     mov dl, 5
     mov dh, 36

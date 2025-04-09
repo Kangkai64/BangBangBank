@@ -329,4 +329,7 @@ calculateTotalCredit PROTO,
 calculateTotalDebit PROTO, 
     transaction: PTR userTransaction
 
+calculateAverageBalance PROTO, 
+    transaction: PTR userTransaction
+printTotal PROTO
 .LIST

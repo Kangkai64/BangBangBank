@@ -829,6 +829,7 @@ searchTransactionLoop:
             ; Parse all fields for this transaction
             INVOKE parseUserTransaction, transaction
             INVOKE calculateTotalCredit, transaction
+            INVOKE calculateAverageBalance, transaction
             INVOKE printUserTransaction, transaction
             jmp searchTransactionLoop
         .ENDIF
@@ -845,6 +846,7 @@ searchTransactionLoop:
             ; Parse all fields for this transaction
             INVOKE parseUserTransaction, transaction
             INVOKE calculateTotalDebit, transaction
+            INVOKE calculateAverageBalance, transaction
             INVOKE printUserTransaction, transaction
             jmp searchTransactionLoop
         .ENDIF
