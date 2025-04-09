@@ -7,6 +7,8 @@ totalBalance    BYTE 32 DUP('0'), 0  ; Buffer for storing balance total as strin
 balanceCount    BYTE 32 DUP('0'), 0 ; Buffer for storing balance count as string
 averageBalance    BYTE 32 DUP('0'), 0  ; Buffer for storing average balance as string
 tempAmount    BYTE 32 DUP(0)       ; Temporary buffer for processing amounts
+dateBuffer    BYTE 32 DUP('0'), 0  ; Buffer for storing date
+oldDateBuffer    BYTE 32 DUP('0'), 0  ; Buffer for storing date
 decimalPointChar BYTE ".", 0
 creditMsg     BYTE "Total Credit: $", 0
 debitMsg      BYTE "Total Debit: $", 0
@@ -69,7 +71,7 @@ calculateTotalDebit ENDP
 ; This module calculates the total of all user transactions
 ; Receives : The address / pointer of the user transaction structure
 ; Returns : Nothing
-; Last update: 7/4/2025
+; Last update: 9/4/2025
 ;----------------------------------------------------------------------
 calculateAverageBalance PROC USES eax ebx ecx edx esi edi, 
     transaction: PTR userTransaction
@@ -91,6 +93,33 @@ done:
     
     ret
 calculateAverageBalance ENDP
+
+;----------------------------------------------------------------------
+; This module calculates the daily balance of all user transactions
+; Receives : The address / pointer of the user transaction structure
+; Returns : Nothing
+; Last update: 9/4/2025
+;----------------------------------------------------------------------
+calculateDailyAverageBalance PROC USES eax ebx ecx edx esi edi, 
+    transaction: PTR userTransaction
+    
+    
+check_date:
+    mov esi, transaction
+    ; Get transaction amount pointer
+    add esi, OFFSET userTransaction.date
+    INVOKE Str_copy, esi, ADDR dateBuffer
+    INVOKE Str_compare, ADDR dateBuffer, ADDR oldDateBuffer
+    .IF !ZERO?
+            INVOKE Str_copy, ADDR dateBuffer, ADDR oldDateBuffer
+            INVOKE calculateAverageBalance, transaction
+      .ENDIF
+    
+    jmp done
+done:    
+    
+    ret
+calculateDailyAverageBalance ENDP
 
 ;----------------------------------------------------------------------
 ; Prints the total credit and debit amounts

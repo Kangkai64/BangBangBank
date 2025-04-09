@@ -331,5 +331,9 @@ calculateTotalDebit PROTO,
 
 calculateAverageBalance PROTO, 
     transaction: PTR userTransaction
+
+calculateDailyAverageBalance PROTO, 
+    transaction: PTR userTransaction
+
 printTotal PROTO
 .LIST
