@@ -22,6 +22,7 @@ transactionIdMsg BYTE "Transaction ID: ", 0
 recipientAccMsg BYTE "Account No: ",0
 recipientNameMsg BYTE "Recipient Name: ", 0  
 transTypeMsg BYTE "Transaction Type: Deposit", 0
+transactionDetailMsg BYTE "Transaction Detail: ", 0
 transactionSuccessful BYTE "Transaction Successful!",0
 transactionCancel BYTE "Transaction Cancelled!",0
 invalidOption BYTE "Invalid option. Please try again.", 0
@@ -29,6 +30,8 @@ transactionVerifiedMsg BYTE "OTP verification successful! Transaction completed.
 transactionFailedMsg BYTE "OTP verification failed! Transaction cancelled.", NEWLINE, 0
 resendOTPMsg BYTE "OTP will resend to the same file.", 0
 promptTransactionAmtMsg BYTE "Enter deposit amount (RM): ", 0
+inputDepositDetail BYTE 255 DUP(?)
+defaultDepositMessage BYTE "Deposit into account", 0
 inputDepositAmount BYTE 255 DUP(?)
 formattedDepositAmount BYTE 32 DUP(0)
 newTransactionId BYTE 255 DUP(?)
@@ -36,7 +39,6 @@ formattedAccountBalance BYTE 32 DUP(0)
 tempBuffer BYTE 32 DUP(0)
 transactionRecord userTransaction <>
 transferTypeStr BYTE "Deposit", 0
-transferDesc BYTE "Cash deposit into account", 0
 
 .code
 processDeposit PROC,
@@ -66,7 +68,16 @@ processDeposit PROC,
     ;prompt transaction amount
     INVOKE promptForTransactionAmount, OFFSET inputDepositAmount, account
 
-    jc done
+    jc done ; Invalid transaction amount
+
+    ; Prompt for transaction detail
+    INVOKE promptForTransactionDetail, ADDR inputDepositDetail
+
+    ; If empty or user exit, use default message
+    .IF CARRY?
+        INVOKE Str_copy, ADDR defaultDepositMessage, ADDR inputDepositDetail
+    .ENDIF
+
     ; confirm transaction
 
 confirmTransaction:
@@ -101,7 +112,12 @@ confirmTransaction:
     INVOKE printString, ADDR amount
     INVOKE addDecimalPoint, ADDR inputDepositAmount, ADDR formattedDepositAmount
     INVOKE printString, ADDR formattedDepositAmount
-    Call Crlf 
+    Call Crlf
+
+    ; Print transaction detail
+    INVOKE printString, ADDR transactionDetailMsg
+    INVOKE printString, ADDR inputDepositDetail
+    Call Crlf
 
     INVOKE printString, ADDR dateHeader
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
@@ -179,8 +195,8 @@ validateOTP:
         ; Copy updated account balance
         INVOKE Str_copy, edi, ADDR transactionRecord.balance
 
-        ; Set description as "Cash deposit into account"
-        INVOKE Str_copy, ADDR transferDesc, ADDR transactionRecord.transaction_detail
+        ; Copy transaction detail
+        INVOKE Str_copy, ADDR inputDepositDetail, ADDR transactionRecord.transaction_detail
 
         ; Copy date
         INVOKE Str_copy, ADDR timeDate, ADDR transactionRecord.date

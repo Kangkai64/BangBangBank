@@ -25,6 +25,7 @@ transactionIdMsg BYTE "Transaction ID: ", 0
 recipientAccMsg BYTE "Account No: ",0
 recipientNameMsg BYTE "Recipient Name: ", 0  
 transTypeMsg BYTE "Transaction Type: Transaction", 0
+transactionDetailMsg BYTE "Transaction Detail: ", 0
 transactionSuccessful BYTE "Transaction Successful!",0
 transactionCancel BYTE "Transaction Cancelled!",0
 invalidOption BYTE "Invalid option. Please try again.", 0
@@ -33,12 +34,13 @@ transactionFailedMsg BYTE "OTP verification failed! Transaction cancelled.", NEW
 resendOTPMsg BYTE "OTP will resend to the same file.", 0
 inputRecipientAccNo BYTE 255 DUP(?)
 inputTransactionAmount BYTE 255 DUP(?)
+inputTransactionDetail BYTE 255 DUP(?)
+defaultTransactionMessage BYTE "Transfer sent to another account", 0
 tempBuffer BYTE 32 DUP(0)
 formattedTransactionAmount BYTE 32 DUP(0)
 newTransactionId BYTE 255 DUP(?)
 transactionRecord userTransaction <>
 transferTypeStr BYTE "Transfer", 0
-transferDesc BYTE "Transfer sent to another account", 0
 
 .code
 processTransaction PROC,
@@ -66,10 +68,10 @@ processTransaction PROC,
     INVOKE printString, ADDR transactionPageTitle
 
     ; prompt for recipient account number
-    INVOKE promptForRecipientAccNo, OFFSET inputRecipientAccNo
+    INVOKE promptForRecipientAccNo, ADDR inputRecipientAccNo
 
     ;validate recipient account
-    INVOKE validateRecipientAcc, OFFSET inputRecipientAccNo
+    INVOKE validateRecipientAcc, ADDR inputRecipientAccNo
     .IF EAX == 0
         INVOKE printString, ADDR recipientAccNotFound
         call Wait_Msg
@@ -84,11 +86,20 @@ processTransaction PROC,
     ; Read user account from userAccount.txt
 	INVOKE inputFromAccountByAccNo, ADDR recipientAccount
 
-    ;prompt transaction amount
-    INVOKE promptForTransactionAmount, OFFSET inputTransactionAmount, account
-    INVOKE validateTransactionAmount, OFFSET inputTransactionAmount, account
+    ; Prompt for transaction amount
+    INVOKE promptForTransactionAmount, ADDR inputTransactionAmount, account
+    INVOKE validateTransactionAmount, ADDR inputTransactionAmount, account
 
     jc done ; Invalid transaction amount
+
+    ; Prompt for transaction detail
+    INVOKE promptForTransactionDetail, ADDR inputTransactionDetail
+
+    ; If empty or user exit, use default message
+    .IF CARRY?
+        INVOKE Str_copy, ADDR defaultTransactionMessage, ADDR inputTransactionDetail
+    .ENDIF
+
     ; confirm transaction
 
 confirmTransaction:
@@ -119,7 +130,12 @@ confirmTransaction:
     INVOKE printString, ADDR amount
     INVOKE addDecimalPoint, ADDR inputTransactionAmount, ADDR formattedTransactionAmount
     INVOKE printString, ADDR formattedTransactionAmount
-    Call Crlf 
+    Call Crlf
+
+    ; Print transaction detail
+    INVOKE printString, ADDR transactionDetailMsg
+    INVOKE printString, ADDR inputTransactionDetail
+    Call Crlf
 
     INVOKE printString, ADDR dateHeader
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
@@ -166,8 +182,23 @@ validateOTP:
         add esi, OFFSET userAccount.customer_id
         INVOKE Str_copy, esi, ADDR transactionRecord.customer_id
 
+        ; Copy account number from the sender
+        mov esi, account
+        add esi, OFFSET userAccount.account_number
+        INVOKE Str_copy, esi, ADDR transactionRecord.sender_account_number
+
         ; Set transaction type as "Transfer"
         INVOKE Str_copy, ADDR transferTypeStr, ADDR transactionRecord.transaction_type
+
+        ; Copy customer id from the recipient
+        lea esi, recipientAccount
+        add esi, OFFSET userAccount.customer_id
+        INVOKE Str_copy, esi, ADDR transactionRecord.recipient_id
+
+        ; Copy account number from the recipient
+        lea esi, recipientAccount
+        add esi, OFFSET userAccount.account_number
+        INVOKE Str_copy, esi, ADDR transactionRecord.recipient_account_number
 
         ; Format amount with minus sign (for transfer out)
         mov al, '-'
@@ -185,11 +216,38 @@ validateOTP:
         ; Add decimal point back to the result
         INVOKE addDecimalPoint, ADDR tempBuffer, esi
 
-        ; Copy the updated balance into the user's account balance
+        ; Copy the updated balance into the user's account balance in transaction log
         INVOKE Str_copy, esi, ADDR transactionRecord.balance
 
-        ; Set description as "Transfer sent to another account"
-        INVOKE Str_copy, ADDR transferDesc, ADDR transactionRecord.transaction_detail
+        ; Copy the updated balance into the user's account balance in user account
+        mov edi, account
+        add edi, OFFSET userAccount.account_balance
+        INVOKE Str_copy, esi, edi
+
+        ; Update the sender account file with new balance
+        INVOKE updateUserAccountFile, account
+
+        ; Get the recipient account balance and format it (remove decimal point)
+        lea esi, recipientAccount
+        add esi, OFFSET userAccount.account_balance
+        INVOKE removeDecimalPoint, esi, ADDR formattedTransactionAmount
+
+        ; Calculate and set new balance (current balance + transfer amount)
+        INVOKE decimalArithmetic, ADDR formattedTransactionAmount, ADDR inputTransactionAmount, ADDR tempBuffer, '+'
+
+        ; Add decimal point back to the result
+        INVOKE addDecimalPoint, ADDR tempBuffer, esi
+
+        ; Copy the updated balance into the recipient's account balance in user account
+        lea edi, recipientAccount
+        add edi, OFFSET userAccount.account_balance
+        INVOKE Str_copy, esi, edi
+
+        ; Update the recipient account file with new balance
+        INVOKE updateUserAccountFile, ADDR recipientAccount
+
+        ; Copy transaction detail
+        INVOKE Str_copy, ADDR inputTransactionDetail, ADDR transactionRecord.transaction_detail
 
         ; Copy date
         INVOKE Str_copy, ADDR timeDate, ADDR transactionRecord.date

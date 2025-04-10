@@ -37,6 +37,7 @@
     <MASM Include="updateFile.asm" />
     <MASM Include="displayLogo.asm" />
     <MASM Include="validateTransactionAmount.asm" />
+    <MASM Include="promptForTransactionDetail.asm" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BangBangBank.inc" />

@@ -74,7 +74,7 @@ TransferStr           BYTE "Transfer", 0
 ; CSV Headers
 headerCredentialLine  BYTE "username,hashed_password,hashed_PIN,customer_id,encryption_key,loginAttempt,firstLoginAttemptTimestamp", NEWLINE, 0
 headerAccountLine     BYTE "account_number,customer_id,full_name,phone_number,email,account_balance,opening_date,transaction_limit,branch_name,branch_address,account_type,currency,beneficiaries", NEWLINE, 0
-headerTransactionLine BYTE "transaction_id,customer_id,transaction_type,amount,balance,transaction_detail,date,time", NEWLINE, 0
+headerTransactionLine BYTE "transaction_id,customer_id,sender_account_number,transaction_type,recipient_id,recipient_account_number,amount,balance,transaction_detail,date,time", NEWLINE, 0
 
 ; System time structure for timestamps
 currTime              SYSTEMTIME <>
@@ -466,7 +466,7 @@ inputFromAccountByAccNo PROC,
     
     pushad
 
-    ; Copy out the customer_id and store it into userCustomerID
+    ; Copy out the account number and store it into userAccountNumber
     mov esi, [recipientAccount]
     add esi, OFFSET userAccount.account_number
     INVOKE Str_copy, esi, ADDR userAccountNumber
@@ -713,7 +713,7 @@ parseUserAccount ENDP
 ; This procedure reads user transaction data from a single file by customer ID
 ; Receives: Pointer to userTransaction structure (transaction) with customer_id filled
 ; Returns: EAX = 0 if the user transaction is not found
-; Last update: 08/04/2025
+; Last update: 10/04/2025
 ;--------------------------------------------------------------------------------
 inputFromTransaction PROC,
     transaction: PTR userTransaction
@@ -812,51 +812,42 @@ searchTransactionLoop:
     ; Compare with input customer_id
     INVOKE Str_compare, ADDR tempBuffer, ADDR userCustomerID
     
-    ; If match found, check transaction type
+    ; If match found, set flag and process
     .IF ZERO?
-        ; Parse transaction_type field
-        mov edi, OFFSET tempBuffer
-        call ParseCSVField
-        ; Check if transaction type is Transfer
-        INVOKE Str_compare, ADDR tempBuffer, ADDR TransferStr
-        .IF ZERO?
-            ; Found the transaction! Set flag
-            mov foundTransaction, 1
-            
-            ; Return to the start of this line
-            mov esi, currentLineStart
+        ; Found a transaction for this customer! Set flag
+        mov foundTransaction, 1
         
-            ; Parse all fields for this transaction
-            INVOKE parseUserTransaction, transaction
+        ; Return to the start of this line
+        mov esi, currentLineStart
+    
+        ; Parse all fields for this transaction
+        INVOKE parseUserTransaction, transaction
+        
+        ; Process based on transaction type
+        mov edi, transaction
+        add edi, OFFSET userTransaction.transaction_type
+        INVOKE Str_compare, edi, ADDR TransferStr
+        .IF ZERO?
             INVOKE calculateTotalCredit, transaction
-            INVOKE calculateDailyAverageBalance, transaction
-            INVOKE printUserTransaction, transaction
-            jmp searchTransactionLoop
+        .ELSE
+            INVOKE Str_compare, edi, ADDR DepositStr
+            .IF ZERO?
+                INVOKE calculateTotalDebit, transaction
+            .ENDIF
         .ENDIF
-
-        ; Check if transaction type is Deposit
-        INVOKE Str_compare, ADDR tempBuffer, ADDR DepositStr
-        .IF ZERO?
-            ; Found the transaction! Set flag
-            mov foundTransaction, 1
         
-            ; Return to the start of this line
-            mov esi, currentLineStart
+        INVOKE calculateDailyAverageBalance, transaction
+        INVOKE printUserTransaction, transaction
         
-            ; Parse all fields for this transaction
-            INVOKE parseUserTransaction, transaction
-            INVOKE calculateTotalDebit, transaction
-            INVOKE calculateDailyAverageBalance, transaction
-            INVOKE printUserTransaction, transaction
-            jmp searchTransactionLoop
-        .ENDIF
+        ; Continue searching for more transactions
+        jmp skipToNextLine
     .ENDIF
     
     ; CustomerID didn't match, skip to next line
 skipToNextLine:
     mov al, [esi]
     cmp al, 0      ; End of file?
-    je transactionNotFound
+    je doneSearching
     cmp al, 10     ; LF?
     je nextLine
     cmp al, 13     ; CR?
@@ -878,9 +869,20 @@ nextLine:
 transactionNotFound:
     mov eax, FALSE
     mov [esp+28], eax
+    jmp readTransactionFileExit
+    
+doneSearching:
+    ; If we found at least one transaction, return success
+    .IF foundTransaction == 1
+        mov eax, TRUE
+        mov [esp+28], eax
+    .ELSE
+        mov eax, FALSE
+        mov [esp+28], eax
+    .ENDIF
     
 readTransactionFileExit:
-	INVOKE calculateAverageBalance, transaction
+    INVOKE calculateAverageBalance, transaction
     INVOKE CloseHandle, fileHandle
     popad
     ret
@@ -892,6 +894,7 @@ inputFromTransaction ENDP
 ; Receives: ESI = pointer to start of transaction record in buffer
 ;           transaction = pointer to userTransaction structure
 ; Returns: Filled user transaction structure
+; Last update: 10/04/2025
 ;--------------------------------------------------------------------------------
 parseUserTransaction PROC,
     transaction: PTR userTransaction
@@ -912,11 +915,32 @@ parseNextTransactionField:
     add edi, OFFSET userTransaction.customer_id
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
+    ; Parse sender_account_number field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.sender_account_number
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
     ; Parse transaction_type field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
     mov edi, transaction
     add edi, OFFSET userTransaction.transaction_type
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse recipient_id field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.recipient_id
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+    
+    ; Parse recipient_account_number field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, transaction
+    add edi, OFFSET userTransaction.recipient_account_number
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
     ; Parse amount field

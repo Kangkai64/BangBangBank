@@ -41,14 +41,17 @@ userAccount ENDS
 ; Transaction Structure
 ;----------------------------
 userTransaction STRUCT
-    transaction_id    BYTE 32 DUP(?)
-    customer_id       BYTE 32 DUP(?)
-    transaction_type  BYTE 32 DUP(?)
-    amount            BYTE 32 DUP(?)
-    balance           BYTE 32 DUP(?)
-    transaction_detail BYTE 255 DUP(?)
-    date              BYTE 32 DUP(?)
-    time              BYTE 32 DUP(?)
+    transaction_id              BYTE 32 DUP(?)
+    customer_id                 BYTE 32 DUP(?)
+    sender_account_number       BYTE 32 DUP(?)
+    transaction_type            BYTE 32 DUP(?)
+    recipient_id                BYTE 32 DUP(?)
+    recipient_account_number    BYTE 32 DUP(?)
+    amount                      BYTE 32 DUP(?)
+    balance                     BYTE 32 DUP(?)
+    transaction_detail          BYTE 255 DUP(?)
+    date                        BYTE 32 DUP(?)
+    time                        BYTE 32 DUP(?)
 userTransaction ENDS
 
 ;-------------------------------------------
@@ -204,9 +207,12 @@ aboutUs PROTO
 processTransaction PROTO,
     account: PTR userAccount
 
-promptForTransactionAmount PROTO \
-    inputTransactionAmountAddress: PTR BYTE, \
+promptForTransactionAmount PROTO,
+    inputTransactionAmountAddress: PTR BYTE,
     account: PTR userAccount
+
+promptForTransactionDetail PROTO,
+    inputTransactionDetailAddress: PTR BYTE
 
 promptForRecipientAccNo PROTO,
     inputRecipientAccNoAddress: PTR BYTE

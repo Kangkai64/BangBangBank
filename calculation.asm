@@ -11,9 +11,9 @@ lastBalanceForDate    BYTE 32 DUP(0)       ; Temporary buffer for processing amo
 dateBuffer    BYTE 32 DUP('0'), 0  ; Buffer for storing date
 oldDateBuffer    BYTE 32 DUP('0'), 0  ; Buffer for storing date
 decimalPointChar BYTE ".", 0
-creditMsg     BYTE "Total Credit: $", 0
-debitMsg      BYTE "Total Debit: $", 0
-balanceMsg      BYTE "Average Balance: $", 0
+creditMsg     BYTE "Total Credit: RM", 0
+debitMsg      BYTE "Total Debit: RM", 0
+balanceMsg      BYTE "Average Balance: RM", 0
 incremental     BYTE '1', 0
 .code
 ;----------------------------------------------------------------------
