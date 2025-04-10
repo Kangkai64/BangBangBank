@@ -11,9 +11,8 @@ INCLUDE BangBangBank.inc
 ;------------------------------------------------------------------------
 
 .data
-promptForTransactionDetailMsg BYTE "Enter recipient details (Enter 9 to use default): ", 0
+promptForTransactionDetailMsg BYTE "Enter recipient details (Press ENTER to use default): ", 0
 inputBuffer BYTE 255 DUP(?)
-exitCode				BYTE "9", 0
 
 .code
 promptForTransactionDetail PROC,
@@ -31,13 +30,6 @@ promptForTransactionDetail PROC,
 
     ; Trims the username
     INVOKE myStr_trim, ADDR inputBuffer, " "
-
-    ; Check if user wants to exit or not
-	INVOKE Str_compare, ADDR inputBuffer, ADDR exitCode
-    .IF ZERO?
-        STC ; Use default message
-	    jmp done
-    .ENDIF
 
 	; Check if user input is empty
 	INVOKE Str_length, ADDR inputBuffer

@@ -14,3 +14,6 @@ T0012,C001,235251356177,Deposit,,,+731.45,3598.01,Cash deposit into account,21/0
 T0013,C001,235251356177,Deposit,,,+419.83,4017.84,Cash deposit into account,24/03/2025,16:42:19
 T0014,C001,235251356177,Transfer,C003,765498764321,-634.29,3383.55,Transfer sent to another account,28/03/2025,11:09:47
 T0015,C001,235251356177,Deposit,,,+519.67,3903.22,Cash deposit into account,02/04/2025,13:54:36
+T0016,C001,,Deposit,,,+200.00,2700.12,Deposit into account,10/04/2025,15:24:38
+T0017,C001,235251356177,Transfer,C003,765498764321,-100.00,2600.12,Transfer sent to another account,10/04/2025,15:25:54
+T0018,C001,,Deposit,,,+100.00,2700.12,Duit kopi rasuah,10/04/2025,15:39:38
