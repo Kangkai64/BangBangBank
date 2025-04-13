@@ -253,7 +253,8 @@ validateRecipientAcc PROTO,
     Account: PTR userAccount
 
 inputFromTransaction PROTO,
-    transaction: PTR userTransaction
+    transaction: PTR userTransaction,
+    selectedMonth: PTR BYTE
 
 validateLoginTime PROTO,
     user: PTR userCredential

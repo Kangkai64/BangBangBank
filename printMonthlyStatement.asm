@@ -11,13 +11,15 @@ lineWidth       BYTE 100               ; Width of the entire statement
 leftPad         BYTE 5 DUP(32), 0      ; Left margin padding
 spaceChar       BYTE " ", 0            ; Single space character
 
+selectedMonth   BYTE "03" ,0
 ; Statement headers and separators
 bankHeader      BYTE "Bang Bang Bank", 0
 bankAddress     BYTE "10th floor, Tower A, Dataran Bang Bang, 1, Jalan Hijau, 59000, Kuala Lumpur", 0
 pageLabel       BYTE "PAGE", 0
 pageNum         BYTE ": 1", 0
-statementDate   BYTE "STATEMENT DATE", 0
-dateValue       BYTE ": 31 / 03 / 2025", 0
+statementDate   BYTE "STATEMENT DATE: ", 0
+timeOutputBuffer BYTE 32 DUP(?)
+timeDate BYTE 16 DUP(?)
 accountLabel    BYTE "ACCOUNT NUMBER", 0
 pidmNotice      BYTE "PROTECTED BY PIDM UP TO RM250,000 FOR EACH DEPOSITOR", 0
 accountType     BYTE "SAVINGS ACCOUNT", 0
@@ -47,7 +49,6 @@ menuNoNext      BYTE "If no next page:", 0
 menuContinue    BYTE "Press any key to continue...", 0
 
 currentTime     SYSTEMTIME <>
-timeOutputBuffer BYTE 32 DUP(?)
 transaction     userTransaction <>
 
 ; Additional variables for alignment
@@ -64,7 +65,7 @@ rightAlignField PROC,
     LOCAL padLen:DWORD
     
     pushad
-    
+
     ; Calculate total length of label and value
     INVOKE Str_length, labelPtr
     mov totalLen, eax
@@ -195,7 +196,30 @@ padDateLabelLoop:
     
     ; Print statement date information (right-aligned)
     INVOKE printString, ADDR statementDate
-    INVOKE printString, ADDR dateValue
+
+     start:
+	; Get current time and format it in DD/MM/YYYY HH:MM:SS format
+	INVOKE GetLocalTime, ADDR currentTime
+	INVOKE formatSystemTime, ADDR currentTime, ADDR timeOutputBuffer
+
+	; Copy the date part of the time stamp
+	lea esi, timeOutputBuffer
+	lea edi, timeDate
+	mov ecx, 10
+
+	copy_date:
+		mov eax, [esi]
+		mov [edi], eax
+		inc esi
+		inc edi
+		LOOP copy_date
+
+	; Add null terminator
+	mov BYTE PTR [edi], 0
+
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
+	INVOKE printString, ADDR timeDate
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
     call Crlf
     
     ; Print left margin padding
@@ -289,7 +313,7 @@ skipTransHeaderPad:
     INVOKE Str_copy, esi, ADDR transaction.customer_id
     
     ; Transaction details
-    INVOKE inputFromTransaction, ADDR transaction
+    INVOKE inputFromTransaction, ADDR transaction , ADDR selectedMonth
     call Crlf
     call printTotal
     call Crlf

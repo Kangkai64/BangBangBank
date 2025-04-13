@@ -710,13 +710,17 @@ parseUserAccount ENDP
 
 ;--------------------------------------------------------------------------------
 ; inputFromTransaction PROC
-; This procedure reads user transaction data from a single file by customer ID
+; This procedure reads user transaction data from a single file by customer ID and month
 ; Receives: Pointer to userTransaction structure (transaction) with customer_id filled
-; Returns: EAX = 0 if the user transaction is not found
-; Last update: 10/04/2025
+;           and selected month as a string (e.g., "01", "02", ..., "12")
+; Returns: EAX = 0 if no transactions found for the user in the selected month
+; Last update: 13/04/2025
 ;--------------------------------------------------------------------------------
 inputFromTransaction PROC,
-    transaction: PTR userTransaction
+    transaction: PTR userTransaction,
+    selectedMonth: PTR BYTE    ; Pointer to a 2-character month string ("01"-"12")
+    
+    LOCAL monthBuffer[3]: BYTE  ; Buffer to hold 2 digits + null terminator
     
     pushad
 
@@ -812,38 +816,69 @@ searchTransactionLoop:
     ; Compare with input customer_id
     INVOKE Str_compare, ADDR tempBuffer, ADDR userCustomerID
     
-    ; If match found, set flag and process
+    ; If customer_id matches, check the date for month
     .IF ZERO?
-        ; Found a transaction for this customer! Set flag
-        mov foundTransaction, 1
+        ; Store the current position
+        push esi
         
-        ; Return to the start of this line
-        mov esi, currentLineStart
-    
-        ; Parse all fields for this transaction
-        INVOKE parseUserTransaction, transaction
+        ; Skip to date field (10th field)
+        ; Skip fields 3-9
+        mov ecx, 7  ; Need to skip 7 more fields to reach date field
+    skipToDateField:
+        mov edi, OFFSET tempBuffer
+        call ParseCSVField
+        loop skipToDateField
         
-        ; Process based on transaction type
-        mov edi, transaction
-        add edi, OFFSET userTransaction.transaction_type
-        INVOKE Str_compare, edi, ADDR TransferStr
+        ; Parse date field
+        mov edi, OFFSET tempBuffer
+        call ParseCSVField
+        
+        ; Extract month from date (format: DD/MM/YYYY)
+        ; Month is at index 3-4
+        
+        ; Copy month part to buffer
+        mov al, [tempBuffer+3]  ; First digit of month
+        mov [monthBuffer], al
+        mov al, [tempBuffer+4]  ; Second digit of month
+        mov [monthBuffer+1], al
+        mov BYTE PTR [monthBuffer+2], 0  ; Null terminator
+        
+        ; Compare with selected month
+        INVOKE Str_compare, ADDR monthBuffer, selectedMonth
+        
+        ; Restore position for further processing
+        pop esi
+        
+        ; If month matches, process the transaction
         .IF ZERO?
-            INVOKE calculateTotalCredit, transaction
-        .ELSE
-            INVOKE Str_compare, edi, ADDR DepositStr
+            ; Found a transaction for this customer in the selected month! Set flag
+            mov foundTransaction, 1
+            
+            ; Return to the start of this line
+            mov esi, currentLineStart
+        
+            ; Parse all fields for this transaction
+            INVOKE parseUserTransaction, transaction
+            
+            ; Process based on transaction type
+            mov edi, transaction
+            add edi, OFFSET userTransaction.transaction_type
+            INVOKE Str_compare, edi, ADDR TransferStr
             .IF ZERO?
-                INVOKE calculateTotalDebit, transaction
+                INVOKE calculateTotalCredit, transaction
+            .ELSE
+                INVOKE Str_compare, edi, ADDR DepositStr
+                .IF ZERO?
+                    INVOKE calculateTotalDebit, transaction
+                .ENDIF
             .ENDIF
+            
+            INVOKE calculateDailyAverageBalance, transaction
+            INVOKE printUserTransaction, transaction
         .ENDIF
-        
-        INVOKE calculateDailyAverageBalance, transaction
-        INVOKE printUserTransaction, transaction
-        
-        ; Continue searching for more transactions
-        jmp skipToNextLine
     .ENDIF
     
-    ; CustomerID didn't match, skip to next line
+    ; Skip to next line
 skipToNextLine:
     mov al, [esi]
     cmp al, 0      ; End of file?
@@ -882,7 +917,9 @@ doneSearching:
     .ENDIF
     
 readTransactionFileExit:
-    INVOKE calculateAverageBalance, transaction
+    .IF foundTransaction == 1
+        INVOKE calculateAverageBalance, transaction
+    .ENDIF
     INVOKE CloseHandle, fileHandle
     popad
     ret
