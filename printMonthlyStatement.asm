@@ -3,10 +3,15 @@ INCLUDE BangBangBank.inc
 ; This module will print monthly statement for the user
 ; Receives : Nothing
 ; Returns : Nothing
-; Last update: 2/4/2025
+; Last update: 13/4/2025
 ;-----------------------------------------------------------
 .data
-break 		    BYTE "    |",0
+; General formatting constants
+lineWidth       BYTE 100               ; Width of the entire statement
+leftPad         BYTE 5 DUP(32), 0      ; Left margin padding
+spaceChar       BYTE " ", 0            ; Single space character
+
+; Statement headers and separators
 bankHeader      BYTE "Bang Bang Bank", 0
 bankAddress     BYTE "10th floor, Tower A, Dataran Bang Bang, 1, Jalan Hijau, 59000, Kuala Lumpur", 0
 pageLabel       BYTE "PAGE", 0
@@ -20,7 +25,6 @@ transHeader     BYTE "ACCOUNT TRANSACTIONS", 0
 columnHeader    BYTE "     ENTRY DATE     |     TRANSACTION DESCRIPTION     |     STATEMENT BALANCE     |     AMOUNT     ", 0
 doubleLine      BYTE "====================================================================================================", 0
 singleLine      BYTE "----------------------------------------------------------------------------------------------------", 0
-
 
 ; Footer data
 endingBalance   BYTE "ENDING BALANCE:", 0
@@ -46,213 +50,316 @@ currentTime     SYSTEMTIME <>
 timeOutputBuffer BYTE 32 DUP(?)
 transaction     userTransaction <>
 
+; Additional variables for alignment
+tempBuffer      BYTE 256 DUP(0)        ; Temporary buffer for string formatting
+
 .code
+; Function to create and print a right-aligned field
+rightAlignField PROC,
+    labelPtr:PTR BYTE,
+    valuePtr:PTR BYTE,
+    fieldWidth:DWORD
+    
+    LOCAL totalLen:DWORD
+    LOCAL padLen:DWORD
+    
+    pushad
+    
+    ; Calculate total length of label and value
+    INVOKE Str_length, labelPtr
+    mov totalLen, eax
+    
+    INVOKE Str_length, valuePtr
+    add totalLen, eax
+    
+    ; Calculate padding needed
+    mov eax, fieldWidth
+    sub eax, totalLen
+    mov padLen, eax
+    
+    ; Print the label
+    INVOKE printString, labelPtr
+    
+    ; Print padding spaces
+    mov ecx, padLen
+    cmp ecx, 0
+    jle skipPad
+padLoop:
+    INVOKE printString, ADDR spaceChar
+    loop padLoop
+skipPad:
+    
+    ; Print the value
+    INVOKE printString, valuePtr
+    
+    popad
+    ret
+rightAlignField ENDP
+
 printMonthlyStatement PROC,
     account: PTR userAccount
+    
+    LOCAL textLen:DWORD
+    LOCAL padLen:DWORD
+    LOCAL totalWidth:DWORD
+    
+    mov totalWidth, 90          ; Total width for content
     
     ; Clear the screen
     call Clrscr
     
-    ; Bank header
-    mov dl, 40
-    mov dh, 1
-    call Gotoxy
+    ; Print left margin padding
+    INVOKE printString, ADDR leftPad
+    
+    ; Bank header (centered manually)
+    INVOKE Str_length, ADDR bankHeader
+    mov textLen, eax
+    
+    mov eax, totalWidth
+    sub eax, textLen
+    shr eax, 1                ; Divide by 2 to get left padding
+    mov padLen, eax
+    
+    ; Print padding spaces for centering
+    mov ecx, padLen
+    cmp ecx, 0
+    jle skipHeaderPad
+headerPadLoop:
+    INVOKE printString, ADDR spaceChar
+    loop headerPadLoop
+skipHeaderPad:
+    
+    ; Print bank header
     INVOKE printString, ADDR bankHeader
+    call Crlf
     
-    ; Bank address
-    mov dl, 15
-    mov dh, 2
-    call Gotoxy
+    ; Print left margin padding
+    INVOKE printString, ADDR leftPad
+    
+    ; Bank address (centered manually)
+    INVOKE Str_length, ADDR bankAddress
+    mov textLen, eax
+    
+    mov eax, totalWidth
+    sub eax, textLen
+    shr eax, 1                ; Divide by 2 to get left padding
+    mov padLen, eax
+    
+    ; Print padding spaces for centering
+    mov ecx, padLen
+    cmp ecx, 0
+    jle skipAddressPad
+addressPadLoop:
+    INVOKE printString, ADDR spaceChar
+    loop addressPadLoop
+skipAddressPad:
+    
+    ; Print bank address
     INVOKE printString, ADDR bankAddress
+    call Crlf
+    call Crlf
     
-    ; Customer information - left side
-    mov dl, 5
-    mov dh, 5
-    call Gotoxy
+    ; Customer information (left column)
+    INVOKE printString, ADDR leftPad
     mov esi, [account]
     add esi, OFFSET userAccount.full_name
     INVOKE printString, esi
     
-    ; Statement information - right side
-    mov dl, 50
-    mov dh, 5
-    call Gotoxy
+    ; Fill the rest of the line with spaces to position right column
+    INVOKE Str_length, esi
+    mov ecx, 45                    ; Position for right column
+    sub ecx, eax                   ; Subtract name length to get padding needed
+    
+    cmp ecx, 0
+    jle skipPadName
+padNameLoop:
+    INVOKE printString, ADDR spaceChar
+    loop padNameLoop
+skipPadName:
+    
+    ; Statement information (right column)
     INVOKE printString, ADDR pageLabel
     
-    mov dl, 65
-    mov dh, 5
-    call Gotoxy
     INVOKE printString, ADDR pageNum
+    call Crlf
+    call Crlf
     
-    mov dl, 50
-    mov dh, 7
-    call Gotoxy
+    ; Print left margin padding
+    INVOKE printString, ADDR leftPad
+    
+    ; Fill with spaces to reach right column position
+    mov ecx, 45                    ; Position for right column
+padDateLabelLoop:
+    INVOKE printString, ADDR spaceChar
+    loop padDateLabelLoop
+    
+    ; Print statement date information (right-aligned)
     INVOKE printString, ADDR statementDate
-    
-    mov dl, 65
-    mov dh, 7
-    call Gotoxy
     INVOKE printString, ADDR dateValue
+    call Crlf
     
-    mov dl, 50
-    mov dh, 8
-    call Gotoxy
+    ; Print left margin padding
+    INVOKE printString, ADDR leftPad
+    
+    ; Fill with spaces to reach right column position
+    mov ecx, 45                    ; Position for right column
+padAcctLabelLoop:
+    INVOKE printString, ADDR spaceChar
+    loop padAcctLabelLoop
+    
+    ; Print account number information (right-aligned)
     INVOKE printString, ADDR accountLabel
     
-    mov dl, 65
-    mov dh, 8
-    call Gotoxy
+    INVOKE printString, ADDR spaceChar
+    
     mov esi, [account]
     add esi, OFFSET userAccount.account_number
     INVOKE printString, esi
+    call Crlf
+    call Crlf
     
-    ; PIDM Notice and Account Type
-    mov dl, 5
-    mov dh, 10
-    call Gotoxy
+    ; PIDM Notice (left-aligned)
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR pidmNotice
     
-    mov dl, 65
-    mov dh, 10
-    call Gotoxy
+    ; Fill remainder of line with spaces
+    INVOKE Str_length, ADDR pidmNotice
+    mov ecx, 60                    ; Position for account type
+    sub ecx, eax                   ; Subtract notice length to get padding needed
+    
+    cmp ecx, 0
+    jle skipPadNotice
+padNoticeLoop:
+    INVOKE printString, ADDR spaceChar
+    loop padNoticeLoop
+skipPadNotice:
+    
+    ; Account Type (right-aligned)
     INVOKE printString, ADDR accountType
+    call Crlf
     
     ; Double line
-    mov dl, 5
-    mov dh, 11
-    call Gotoxy
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR doubleLine
+    call Crlf
     
-    ; Account Transactions header
-    mov dl, 40
-    mov dh, 12
-    call Gotoxy
+    ; Account Transactions header (centered manually)
+    INVOKE printString, ADDR leftPad
+    
+    INVOKE Str_length, ADDR transHeader
+    mov textLen, eax
+    
+    mov eax, totalWidth
+    sub eax, textLen
+    shr eax, 1                ; Divide by 2 to get left padding
+    mov padLen, eax
+    
+    ; Print padding spaces for centering
+    mov ecx, padLen
+    cmp ecx, 0
+    jle skipTransHeaderPad
+transHeaderPadLoop:
+    INVOKE printString, ADDR spaceChar
+    loop transHeaderPadLoop
+skipTransHeaderPad:
+    
+    ; Print transactions header
     INVOKE printString, ADDR transHeader
+    call Crlf
     
     ; Double line
-    mov dl, 5
-    mov dh, 13
-    call Gotoxy
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR doubleLine
+    call Crlf
     
     ; Column headers
-    mov dl, 5
-    mov dh, 14
-    call Gotoxy
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR columnHeader
-    
-    ; Single line
-    mov dl, 5
-    mov dh, 16
-    call Gotoxy
-    INVOKE printString, ADDR singleLine
-
-    ; Copy out the customer_id and store it into user account structure
-     mov esi, [account]
-     add esi, OFFSET userAccount.customer_id
-     INVOKE Str_copy, esi, ADDR transaction.customer_id
-
-
-     ; Copy out the customer_id and store it into user account structure
-     mov esi, [account]
-     add esi, OFFSET userAccount.customer_id
-     INVOKE Str_copy, esi, ADDR transaction.customer_id
-
-    ; Transaction details
-    call CRLF
-    INVOKE inputFromTransaction, ADDR transaction
-    call CRLF
-    call printTotal
-    call CRLF
-    ; Single line
-    mov dl, 5
-    mov dh, 36
-    call Gotoxy
-    INVOKE printString, ADDR singleLine
-    
-    INVOKE printString, ADDR break
-    INVOKE printString, ADDR avgExpenses
-    call CRLF
-    
-    INVOKE printString, ADDR break
-    INVOKE printString, ADDR variance
-    call CRLF
-
-    mov dl, 20
-    mov dh, 35
-    call Gotoxy
-    INVOKE printString, ADDR stdDev
-    
-    ; Single line
-    mov dl, 5
-    mov dh, 36
-    call Gotoxy
-    INVOKE printString, ADDR singleLine
-
     call Crlf
+    call Crlf
+    
+    ; Single line
+    INVOKE printString, ADDR leftPad
+    INVOKE printString, ADDR singleLine
+    call Crlf
+    
+    ; Copy customer_id to transaction structure
+    mov esi, [account]
+    add esi, OFFSET userAccount.customer_id
+    INVOKE Str_copy, esi, ADDR transaction.customer_id
+    
+    ; Transaction details
+    INVOKE inputFromTransaction, ADDR transaction
+    call Crlf
+    call printTotal
+    call Crlf
+    
+    ; Single line
+    INVOKE printString, ADDR leftPad
+    INVOKE printString, ADDR singleLine
+    call Crlf
+    
+    ; Print notes and menu
     call MSnote
-
+    
 done:
-    STC ;Don't logout the user
+    STC                            ; Don't logout the user
     ret
 printMonthlyStatement ENDP
 
 MSnote PROC
-
     pushad
-    mov dl, 5
-    mov dh, 37
-    call Gotoxy
+    
+    ; Note header
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR note
+    call Crlf
     
-    mov dl, 5
-    mov dh, 38
-    call Gotoxy
+    ; Note 1
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR note1
+    call Crlf
     
-    mov dl, 5
-    mov dh, 39
-    call Gotoxy
+    ; Note 2
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR note2
+    call Crlf
     
-    mov dl, 5
-    mov dh, 40
-    call Gotoxy
+    ; Note 3
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR note3
+    call Crlf
+    call Crlf
     
     ; Menu options
-    mov dl, 5
-    mov dh, 42
-    call Gotoxy
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR menuPrompt
+    call Crlf
     
-    mov dl, 5
-    mov dh, 43
-    call Gotoxy
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR menuOption1
+    call Crlf
     
-    mov dl, 5
-    mov dh, 44
-    call Gotoxy
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR menuOption2
+    call Crlf
     
-    mov dl, 5
-    mov dh, 45
-    call Gotoxy
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR menuOption3
+    call Crlf
+    call Crlf
     
-    mov dl, 5
-    mov dh, 47
-    call Gotoxy
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR menuNoNext
+    call Crlf
+    call Crlf
     
-    mov dl, 5
-    mov dh, 49
-    call Gotoxy
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR menuContinue
     
-    ; Exit monthly statement
-	call Wait_Msg
+    ; Wait for user input
+    call Wait_Msg
+    
     popad
     ret
 MSnote ENDP

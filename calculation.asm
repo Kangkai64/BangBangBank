@@ -121,7 +121,6 @@ check_date:
         .IF dateBuffer[0] != 0  ; If not first record
             ; Process the last balance from previous date
             INVOKE decimalArithmetic, ADDR balanceCount, ADDR incremental, ADDR balanceCount, '+'
-            INVOKE printString, ADDR balanceCount
             ; Copy and remove decimal point from the last balance of previous date
             INVOKE Str_copy, ADDR lastBalanceForDate, ADDR tempAmount
             INVOKE removeDecimalPoint, ADDR tempAmount, ADDR tempAmount
