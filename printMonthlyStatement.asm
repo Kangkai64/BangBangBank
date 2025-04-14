@@ -3,7 +3,7 @@ INCLUDE BangBangBank.inc
 ; This module will print monthly statement for the user
 ; Receives : Nothing
 ; Returns : Nothing
-; Last update: 13/4/2025
+; Last update: 14/4/2025
 ;-----------------------------------------------------------
 .data
 ; General formatting constants
@@ -11,7 +11,16 @@ lineWidth       BYTE 100               ; Width of the entire statement
 leftPad         BYTE 5 DUP(32), 0      ; Left margin padding
 spaceChar       BYTE " ", 0            ; Single space character
 
-selectedMonth   BYTE "all" ,0
+; Month input prompt and validation
+monthPrompt     BYTE "Enter month (MM/YYYY format or 'all'): ", 0
+invalidFormat   BYTE "Invalid format! Please use MM/YYYY format (e.g., 03/2025) or 'all'.", 0
+selectedMonth   BYTE 16 DUP(0)         ; Buffer to store user-selected month
+monthBuffer     BYTE 32 DUP(0)         ; Temporary buffer for month input
+charIndex       DWORD 0                ; Index for character input
+
+; Constant for "all" option
+allOption       BYTE "all", 0
+
 ; Statement headers and separators
 bankHeader      BYTE "Bang Bang Bank", 0
 bankAddress     BYTE "10th floor, Tower A, Dataran Bang Bang, 1, Jalan Hijau, 59000, Kuala Lumpur", 0
@@ -55,6 +64,134 @@ transaction     userTransaction <>
 tempBuffer      BYTE 256 DUP(0)        ; Temporary buffer for string formatting
 
 .code
+; Function to get and validate month input from user character by character
+getSelectedMonth PROC
+    LOCAL inputLen:DWORD
+    LOCAL currChar:BYTE
+
+getMonthInput:
+    ; Clear the month buffer
+    mov ecx, LENGTHOF monthBuffer
+    mov edi, OFFSET monthBuffer
+    mov al, 0
+    rep stosb
+
+    ; Clear the selected month buffer
+    mov ecx, LENGTHOF selectedMonth
+    mov edi, OFFSET selectedMonth
+    mov al, 0
+    rep stosb
+
+    ; Reset character index
+    mov charIndex, 0
+
+    ; Prompt for month
+    INVOKE printString, ADDR monthPrompt
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, INPUT
+
+    ; Get input character by character
+    mov edi, OFFSET monthBuffer
+charInputLoop:
+    call ReadChar
+    
+    ; Check for Enter key (end of input)
+    .IF al == 13
+        ; Add null terminator
+        mov BYTE PTR [edi], 0
+        jmp validateInput
+    .ENDIF
+    
+    ; Check for Backspace
+    .IF al == 8
+        ; Handle backspace if not at beginning
+        .IF charIndex > 0
+            ; Move cursor back, print space, move cursor back again
+            call WriteChar    ; Backspace moves cursor back
+            mov al, 32        ; Space character
+            call WriteChar    ; Write space to erase character
+            mov al, 8         ; Backspace character
+            call WriteChar    ; Move cursor back again
+            
+            ; Update buffer and index
+            dec edi
+            dec charIndex
+        .ENDIF
+    .ELSE
+        ; Store character if buffer not full (limit to 10 chars for safety)
+        .IF charIndex < 10
+            mov BYTE PTR [edi], al
+            inc edi
+            inc charIndex
+            call WriteChar    ; Echo character
+        .ENDIF
+    .ENDIF
+    
+    jmp charInputLoop
+
+validateInput:
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
+    call Crlf
+    
+    ; Check for "all" option (case insensitive)
+    ;INVOKE Str_ucase, ADDR monthBuffer  ; Convert to uppercase for comparison
+    INVOKE Str_compare, ADDR monthBuffer, ADDR allOption
+    .IF ZERO?
+        ; User entered "all"
+        INVOKE Str_copy, ADDR allOption, ADDR selectedMonth
+        jmp validInput
+    .ENDIF
+
+    ; Validate MM/YYYY format
+    INVOKE Str_length, ADDR monthBuffer
+    mov inputLen, eax
+    
+    ; Check length (should be 7 characters: MM/YYYY)
+    .IF inputLen != 7
+        jmp invalidInput
+    .ENDIF
+    
+    ; Check if month is numeric (0-9)
+    mov al, monthBuffer
+    .IF al < '0' || al > '9'
+        jmp invalidInput
+    .ENDIF
+    
+    mov al, monthBuffer+1
+    .IF al < '0' || al > '9'
+        jmp invalidInput
+    .ENDIF
+    
+    ; Check for '/' separator
+    mov al, monthBuffer+2
+    .IF al != '/'
+        jmp invalidInput
+    .ENDIF
+    
+    ; Check if year is numeric (0-9)
+    mov ecx, 4  ; Check 4 digits for year
+    mov esi, OFFSET monthBuffer
+    add esi, 3  ; Start at year position
+yearLoop:
+    mov al, [esi]
+    .IF al < '0' || al > '9'
+        jmp invalidInput
+    .ENDIF
+    inc esi
+    loop yearLoop
+    
+    ; Valid format, copy to selectedMonth
+    INVOKE Str_copy, ADDR monthBuffer, ADDR selectedMonth
+    jmp validInput
+    
+invalidInput:
+    INVOKE printString, ADDR invalidFormat
+    call Crlf
+    jmp getMonthInput
+    
+validInput:
+    ret
+getSelectedMonth ENDP
+
 ; Function to create and print a right-aligned field
 rightAlignField PROC,
     labelPtr:PTR BYTE,
@@ -105,6 +242,9 @@ printMonthlyStatement PROC,
     LOCAL totalWidth:DWORD
     
     mov totalWidth, 90          ; Total width for content
+    
+    ; Prompt for month selection
+    call getSelectedMonth
     
     ; Clear the screen
     call Clrscr
@@ -197,28 +337,28 @@ padDateLabelLoop:
     ; Print statement date information (right-aligned)
     INVOKE printString, ADDR statementDate
 
-     start:
-	; Get current time and format it in DD/MM/YYYY HH:MM:SS format
-	INVOKE GetLocalTime, ADDR currentTime
-	INVOKE formatSystemTime, ADDR currentTime, ADDR timeOutputBuffer
+    start:
+    ; Get current time and format it in DD/MM/YYYY HH:MM:SS format
+    INVOKE GetLocalTime, ADDR currentTime
+    INVOKE formatSystemTime, ADDR currentTime, ADDR timeOutputBuffer
 
-	; Copy the date part of the time stamp
-	lea esi, timeOutputBuffer
-	lea edi, timeDate
-	mov ecx, 10
+    ; Copy the date part of the time stamp
+    lea esi, timeOutputBuffer
+    lea edi, timeDate
+    mov ecx, 10
 
-	copy_date:
-		mov eax, [esi]
-		mov [edi], eax
-		inc esi
-		inc edi
-		LOOP copy_date
+    copy_date:
+        mov eax, [esi]
+        mov [edi], eax
+        inc esi
+        inc edi
+        LOOP copy_date
 
-	; Add null terminator
-	mov BYTE PTR [edi], 0
+    ; Add null terminator
+    mov BYTE PTR [edi], 0
 
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
-	INVOKE printString, ADDR timeDate
+    INVOKE printString, ADDR timeDate
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
     call Crlf
     
@@ -312,8 +452,8 @@ skipTransHeaderPad:
     add esi, OFFSET userAccount.customer_id
     INVOKE Str_copy, esi, ADDR transaction.customer_id
     
-    ; Transaction details
-    INVOKE inputFromTransaction, ADDR transaction , ADDR selectedMonth
+    ; Transaction details - pass selectedMonth to filter transactions
+    INVOKE inputFromTransaction, ADDR transaction, ADDR selectedMonth
     call Crlf
     call printTotal
     call Crlf

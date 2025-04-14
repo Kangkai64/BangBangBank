@@ -325,6 +325,8 @@ processDeposit PROTO,
 
 switchAccount PROTO
 
+getSelectedMonth PROTO
+
 printMonthlyStatement PROTO,
 	account: PTR userAccount
 
