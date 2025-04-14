@@ -710,17 +710,17 @@ parseUserAccount ENDP
 
 ;--------------------------------------------------------------------------------
 ; inputFromTransaction PROC
-; This procedure reads user transaction data from a single file by customer ID and month
+; This procedure reads user transaction data from a single file by customer ID and month/year
 ; Receives: Pointer to userTransaction structure (transaction) with customer_id filled
-;           and selected month as a string (e.g., "01", "02", ..., "12")
-; Returns: EAX = 0 if no transactions found for the user in the selected month
-; Last update: 13/04/2025
+;           and selected month/year as a string (e.g., "03/2025")
+; Returns: EAX = 0 if no transactions found for the user in the selected month/year
+; Last update: 14/04/2025
 ;--------------------------------------------------------------------------------
 inputFromTransaction PROC,
     transaction: PTR userTransaction,
-    selectedMonth: PTR BYTE    ; Pointer to a 2-character month string ("01"-"12")
+    selectedMonthYear: PTR BYTE    ; Pointer to a month/year string ("MM/YYYY")
     
-    LOCAL monthBuffer[3]: BYTE  ; Buffer to hold 2 digits + null terminator
+    LOCAL monthYearBuffer[8]: BYTE  ; Buffer to hold MM/YYYY + null terminator
     
     pushad
 
@@ -816,13 +816,13 @@ searchTransactionLoop:
     ; Compare with input customer_id
     INVOKE Str_compare, ADDR tempBuffer, ADDR userCustomerID
     
-    ; If customer_id matches, check the date for month
+    ; If customer_id matches, check the date for month/year
     .IF ZERO?
         ; Store the current position
         push esi
         
-        ; Skip to date field (10th field)
-        ; Skip fields 3-9
+        ; Skip to date field (9th field)
+        ; Skip fields 3-8
         mov ecx, 7  ; Need to skip 7 more fields to reach date field
     skipToDateField:
         mov edi, OFFSET tempBuffer
@@ -833,25 +833,33 @@ searchTransactionLoop:
         mov edi, OFFSET tempBuffer
         call ParseCSVField
         
-        ; Extract month from date (format: DD/MM/YYYY)
-        ; Month is at index 3-4
+        ; Extract month/year from date (format: DD/MM/YYYY)
+        ; Month/Year is at index 3-10 (MM/YYYY)
         
-        ; Copy month part to buffer
-        mov al, [tempBuffer+3]  ; First digit of month
-        mov [monthBuffer], al
-        mov al, [tempBuffer+4]  ; Second digit of month
-        mov [monthBuffer+1], al
-        mov BYTE PTR [monthBuffer+2], 0  ; Null terminator
+        ; Copy month/year part to buffer
+        mov ecx, 7  ; Copy 7 characters (MM/YYYY)
+        mov esi, OFFSET tempBuffer
+        add esi, 3  ; Start at index 3 (MM part)
+        lea edi, monthYearBuffer
         
-        ; Compare with selected month
-        INVOKE Str_compare, ADDR monthBuffer, selectedMonth
+    copyMonthYearLoop:
+        mov al, [esi]
+        mov [edi], al
+        inc esi
+        inc edi
+        loop copyMonthYearLoop
+        
+        mov BYTE PTR [edi], 0  ; Null terminator
+        
+        ; Compare with selected month/year
+        INVOKE Str_compare, ADDR monthYearBuffer, selectedMonthYear
         
         ; Restore position for further processing
         pop esi
         
-        ; If month matches, process the transaction
+        ; If month/year matches, process the transaction
         .IF ZERO?
-            ; Found a transaction for this customer in the selected month! Set flag
+            ; Found a transaction for this customer in the selected month/year! Set flag
             mov foundTransaction, 1
             
             ; Return to the start of this line
