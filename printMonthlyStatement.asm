@@ -132,18 +132,18 @@ charInputLoop:
     jmp charInputLoop
 
 validateInput:
-    ; Clear the selected month buffer
-    mov ecx, LENGTHOF selectedMonth
-    mov edi, OFFSET selectedMonth
-    mov al, 0
-    rep stosb
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
     call Crlf
-    
     ; Check for "all" option (case sensitive)
     INVOKE Str_compare, ADDR monthBuffer, ADDR allOption
     .IF ZERO?
         ; User entered "all"
+        ; Clear the selected month buffer
+        mov ecx, LENGTHOF selectedMonth
+        mov edi, OFFSET selectedMonth
+        mov al, 0
+        rep stosb
+        ; Copy "all" to selectedMonth
         INVOKE Str_copy, ADDR allOption, ADDR selectedMonth
         jmp validInput
     .ENDIF
@@ -185,7 +185,11 @@ yearLoop:
     .ENDIF
     inc esi
     loop yearLoop
-    
+    ; Clear the selected month buffer
+    mov ecx, LENGTHOF selectedMonth
+    mov edi, OFFSET selectedMonth
+    mov al, 0
+    rep stosb
     ; Valid format, copy to selectedMonth
     INVOKE Str_copy, ADDR monthBuffer, ADDR selectedMonth
     jmp validInput
@@ -492,6 +496,7 @@ skipTransHeaderPad:
     call getSelectedMonth
     
     ; Check if exit flag is set (indicating empty input)
+    call clrscr
     cmp exitflag, 1
     je done
     
