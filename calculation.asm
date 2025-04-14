@@ -15,7 +15,83 @@ creditMsg     BYTE "Total Credit: RM", 0
 debitMsg      BYTE "Total Debit: RM", 0
 balanceMsg      BYTE "Average Balance: RM", 0
 incremental     BYTE '1', 0
+leftPad         BYTE 5 DUP(32), 0      ; Left margin padding
 .code
+;----------------------------------------------------------------------
+; This module reset all the global variables
+; Receives : Nothing
+; Returns : Nothing
+; Last update: 7/4/2025
+;----------------------------------------------------------------------
+resetData PROC
+    push eax         ; Save registers
+    push ecx
+    push edi
+    
+    ; Reset totalCredit (fill with '0')
+    mov edi, OFFSET totalCredit
+    mov al, '0'
+    mov ecx, 32
+    rep stosb
+    mov BYTE PTR [edi], 0    ; Null-terminate
+    
+    ; Reset totalDebit
+    mov edi, OFFSET totalDebit
+    mov al, '0'
+    mov ecx, 32
+    rep stosb
+    mov BYTE PTR [edi], 0    ; Null-terminate
+    
+    ; Reset totalBalance
+    mov edi, OFFSET totalBalance
+    mov al, '0'
+    mov ecx, 32
+    rep stosb
+    mov BYTE PTR [edi], 0    ; Null-terminate
+    
+    ; Reset balanceCount
+    mov edi, OFFSET balanceCount
+    mov al, '0'
+    mov ecx, 32
+    rep stosb
+    mov BYTE PTR [edi], 0    ; Null-terminate
+    
+    ; Reset averageBalance
+    mov edi, OFFSET averageBalance
+    mov al, '0'
+    mov ecx, 32
+    rep stosb
+    mov BYTE PTR [edi], 0    ; Null-terminate
+    
+    ; Clear temp buffers (fill with 0)
+    mov edi, OFFSET tempAmount
+    mov al, 0
+    mov ecx, 32
+    rep stosb
+    
+    mov edi, OFFSET lastBalanceForDate
+    mov al, 0
+    mov ecx, 32
+    rep stosb
+    
+    ; Reset date buffers
+    mov edi, OFFSET dateBuffer
+    mov al, '0'
+    mov ecx, 32
+    rep stosb
+    mov BYTE PTR [edi], 0    ; Null-terminate
+    
+    mov edi, OFFSET oldDateBuffer
+    mov al, '0'
+    mov ecx, 32
+    rep stosb
+    mov BYTE PTR [edi], 0    ; Null-terminate
+    
+    pop edi          ; Restore registers
+    pop ecx
+    pop eax
+    ret
+resetData ENDP
 ;----------------------------------------------------------------------
 ; This module calculates the total of all user transactions
 ; Receives : The address / pointer of the user transaction structure
@@ -150,16 +226,19 @@ printTotal PROC
     pushad
     INVOKE addDecimalPoint, ADDR totalCredit, ADDR tempAmount
     ; Display the credit total
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR creditMsg
     INVOKE printString, ADDR tempAmount
     call CRLF
     INVOKE addDecimalPoint, ADDR totalDebit, ADDR tempAmount
     ; Display the debit total
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR debitMsg
     INVOKE printString, ADDR tempAmount
     call CRLF
     INVOKE addDecimalPoint, ADDR averageBalance, ADDR tempAmount
     ; Display the debit total
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR balanceMsg
     INVOKE printString, ADDR tempAmount
     call CRLF

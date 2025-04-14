@@ -256,7 +256,8 @@ validateRecipientAcc PROTO,
     Account: PTR userAccount
 
 inputFromTransaction PROTO,
-    transaction: PTR userTransaction
+    transaction: PTR userTransaction,
+    selectedMonth: PTR BYTE
 
 inputTotalTransactionFromTransaction PROTO,
     transaction: PTR userTransaction,
@@ -332,10 +333,14 @@ processDeposit PROTO,
 
 switchAccount PROTO
 
+getSelectedMonth PROTO
+
 printMonthlyStatement PROTO,
 	account: PTR userAccount
 
 MSnote PROTO
+
+resetData PROTO
 
 calculateTotalCredit PROTO, 
     transaction: PTR userTransaction
