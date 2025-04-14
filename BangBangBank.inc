@@ -280,6 +280,7 @@ validatePasswordComplexity PROTO,
 
 validateTransactionAmount PROTO,
     inputTransactionAmountAddress: PTR BYTE,
+    feeApplied: PTR BYTE,
     account: PTR userAccount
 
 updateFile PROTO,

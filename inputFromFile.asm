@@ -992,6 +992,17 @@ inputTotalTransactionFromTransaction PROC,
     
     pushad
     
+    ; Initialize dailyTotalTransactions to zero
+    ; This ensures we start with a clean slate each time
+    mov edi, dailyTotalTransactions
+    mov ecx, 32  ; Assuming dailyTotalTransactions is 32 bytes
+    mov al, '0'
+init_loop:
+    mov [edi], al
+    inc edi
+    loop init_loop
+    mov BYTE PTR [edi-1], 0  ; Null terminate
+    
     ; Copy out the account number
     mov esi, [transaction]
     add esi, OFFSET userTransaction.sender_account_number
@@ -999,13 +1010,13 @@ inputTotalTransactionFromTransaction PROC,
     
     ; Open the transaction file
     INVOKE CreateFile, 
-        ADDR transactionFileName,        ; lpFileName
-        GENERIC_READ,                    ; dwDesiredAccess
-        FILE_SHARE_READ,                 ; dwShareMode
-        NULL,                            ; lpSecurityAttributes
-        OPEN_EXISTING,                   ; dwCreationDisposition
-        FILE_ATTRIBUTE_NORMAL,           ; dwFlagsAndAttributes
-        NULL                             ; hTemplateFile
+        ADDR transactionFileName,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
         
     mov fileHandle, eax
     
@@ -1017,7 +1028,6 @@ inputTotalTransactionFromTransaction PROC,
     INVOKE printString, ADDR transactionFileName
     call Crlf
     INVOKE printString, ADDR errorMsg
-
     call Wait_Msg
     mov foundTransaction, 0  ; Set not found flag
     jmp readTransactionFileExit
@@ -1025,12 +1035,12 @@ inputTotalTransactionFromTransaction PROC,
 fileOpenSuccess:
     ; Read file content
     INVOKE ReadFile, 
-        fileHandle,                     ; hFile
-        ADDR readBuffer,                ; lpBuffer
-        SIZEOF readBuffer - 1,          ; nNumberOfBytesToRead
-        ADDR bytesRead,                 ; lpNumberOfBytesRead
-        NULL    
-        ; lpOverlapped
+        fileHandle,
+        ADDR readBuffer,
+        SIZEOF readBuffer - 1,
+        ADDR bytesRead,
+        NULL
+    
     ; Check if read was successful
     .IF eax == 0
         INVOKE printString, ADDR errorMsg
@@ -1062,13 +1072,20 @@ skipCR:
     inc esi            ; Skip CR
     cmp BYTE PTR [esi], 10  ; Check for LF
     jne skipHeaderLoop
-    inc esi            ; Skip LF
+    ; Fall through to foundDataStart
 
 foundDataStart:
+    inc esi            ; Skip LF to get to start of data
+    
     ; Set foundTransaction flag to 0 (not found)
     mov foundTransaction, 0
     
 searchTransactionLoop:
+    ; Check if we've reached end of buffer
+    mov al, [esi]
+    cmp al, 0          ; End of buffer?
+    je doneSearching
+
     ; Store current line start
     mov currentLineStart, esi
     
@@ -1089,7 +1106,6 @@ searchTransactionLoop:
     
     ; If account matches
     .IF ZERO?
-
         ; Return to line start and parse transaction
         mov esi, currentLineStart
 
@@ -1107,7 +1123,6 @@ searchTransactionLoop:
             
             INVOKE Str_compare, edi, timeDate
             .IF ZERO?
-
                 ; Found a transaction for this customer! Set flag
                 mov foundTransaction, 1
 
@@ -1115,19 +1130,25 @@ searchTransactionLoop:
                 mov esi, transaction
                 add esi, OFFSET userTransaction.amount
 
+                ; For debugging: print amount
+                ;INVOKE printString, esi
+                ;call Crlf
+
                 ; Remove decimal point
                 INVOKE removeDecimalPoint, esi, ADDR tempAmount
                 
                 ; Add to running total
-                INVOKE decimalArithmetic, ADDR dailyTotalTransactions, ADDR tempAmount, ADDR dailyTotalTransactions, '+'
-                INVOKE printString, ADDR dailyTotalTransactions
-                call Crlf
+                INVOKE decimalArithmetic, dailyTotalTransactions, ADDR tempAmount, dailyTotalTransactions, '+'
+                
+                ; For debugging: print running total
+                ;INVOKE printString, dailyTotalTransactions
+                ;call Crlf
             .ENDIF
         .ENDIF
-        ; Continue searching for more transactions
-        jmp skipToNextLine
     .ENDIF
     
+    ; Skip to next line - IMPORTANT to continue search
+    mov esi, currentLineStart
 skipToNextLine:
     mov al, [esi]
     cmp al, 0      ; End of file?
@@ -1143,21 +1164,27 @@ skipToNextCR:
     inc esi        ; Skip CR
     cmp BYTE PTR [esi], 10  ; Check for LF
     jne skipToNextLine
-    inc esi        ; Skip LF
-    jmp searchTransactionLoop
-    
+    ; Fall through to nextLine
+
 nextLine:
     inc esi        ; Skip LF
-    jmp searchTransactionLoop
+    jmp searchTransactionLoop  ; CONTINUE SEARCH!
 
 transactionNotFound:
     mov eax, FALSE
-    mov [esp+28], eax
+    mov [esp+28], eax  ; Return FALSE
     jmp readTransactionFileExit
     
 doneSearching:
-    mov eax, TRUE
-    mov [esp+28], eax  ; Return TRUE
+    ; If we found at least one transaction, return success
+    .IF foundTransaction == 1
+        mov eax, TRUE
+        mov [esp+28], eax
+    .ELSE
+        mov eax, FALSE
+        mov [esp+28], eax
+    .ENDIF
+    
     
 readTransactionFileExit:
     INVOKE CloseHandle, fileHandle

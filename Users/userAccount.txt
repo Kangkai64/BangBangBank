@@ -1,6 +1,6 @@
 account_number,customer_id,full_name,phone_number,email,account_balance,opening_date,transaction_limit,branch_name,branch_address,account_type,currency,beneficiaries
-235251356177,C001,Bobby,012-555-1234,jdoe@gmail.com,4288.11,15/01/2025,500.00,Main Branch,123 Main St,Current,RM,[Chen Wei. Sarah Jones]
-123456781234,C001,Bobby,012-555-1234,jdoe@gmail.com,4912.76,15/01/2025,5000.00,Main Branch,123 Main St,Savings,RM,[Chen Wei. Sarah Jones]
+235251356177,C001,Bobby,012-555-1234,jdoe@gmail.com,287.11,15/01/2025,7000.00,Main Branch,123 Main St,Current,RM,[Chen Wei. Sarah Jones]
+123456781234,C001,Bobby,012-555-1234,jdoe@gmail.com,8912.76,15/01/2025,5000.00,Main Branch,123 Main St,Savings,RM,[Chen Wei. Sarah Jones]
 234567891234,C002,Alice Smith,013-535-5678,asmith@gmail.com,2500.00,20/02/2025,3000.00,East Branch,456 East Rd,Checking,RM,[Bob White]
 765498764321,C003,Bob White,016-354-8765,bwhite@gmail.com,3600.50,05/03/2025,7000.00,West Branch,789 West Ave,Savings,RM,[Alice Smith]
 345678912345,C004,Chen Wei,017-654-3210,cwei@gmail.com,4750.25,12/03/2025,6500.00,North Branch,321 North Blvd,Checking,RM,[Bobby. Sarah Jones]

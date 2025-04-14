@@ -23,6 +23,7 @@ INCLUDE BangBangBank.inc
 .code
 validateTransactionAmount PROC,
     inputTransactionAmountAddress: PTR BYTE,
+    feeApplied: PTR BYTE,
     account: PTR userAccount
     
     LOCAL tempBuffer[32]: BYTE
@@ -65,12 +66,14 @@ validateTransactionAmount PROC,
         ; Call procedure to get sum of all transactions today
         INVOKE inputTotalTransactionFromTransaction, ADDR senderTransaction, ADDR timeDate, ADDR dailyTotalTransactions
         INVOKE printString, ADDR dailyTotalTransactions
+        call Crlf
         ; Format the new transaction amount
         INVOKE removeDecimalPoint, inputTransactionAmountAddress, ADDR formattedTransAmount
         
         ; Add new transaction to today's total
         INVOKE decimalArithmetic, ADDR dailyTotalTransactions, ADDR formattedTransAmount, ADDR totalWithCurrentTransaction, '-'
         INVOKE printString, ADDR totalWithCurrentTransaction
+        call Crlf
         ; Compare total+new with limit
         INVOKE decimalArithmetic, ADDR transactionLimit, ADDR totalWithCurrentTransaction, ADDR tempBuffer, '+'
         
@@ -80,9 +83,10 @@ validateTransactionAmount PROC,
         cmp al, '-'
         jne check_balance  ; Not over limit, proceed
         
-        ; Over limit - display message and set flag
+        ; Over limit - display message
         INVOKE printString, ADDR exceedTransactionLimit
-        STC  ; Set carry flag for extra fee
+        mov esi, feeApplied    ; Load address of feeApplied into esi
+        mov BYTE PTR [esi], 1  ; Store 1 at the address in esi
     .ENDIF
     
 check_balance:
