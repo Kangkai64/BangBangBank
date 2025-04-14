@@ -51,6 +51,7 @@ userAccountNumber     BYTE 32 DUP(?)
 fieldIndex            DWORD 0
 totalCredit   BYTE 32 DUP('0'), 0  ; Buffer for storing credit total as string
 totalDebit    BYTE 32 DUP('0'), 0  ; Buffer for storing debit total as string
+allStr          BYTE "all", 0  ; String constant for the "all" option
 
 ; Error messages
 errorMsg              BYTE "Error: File cannot be opened or read", NEWLINE, 0
@@ -710,15 +711,28 @@ parseUserAccount ENDP
 
 ;--------------------------------------------------------------------------------
 ; inputFromTransaction PROC
-; This procedure reads user transaction data from a single file by customer ID
+; This procedure reads user transaction data from a single file by customer ID and month/year
 ; Receives: Pointer to userTransaction structure (transaction) with customer_id filled
-; Returns: EAX = 0 if the user transaction is not found
-; Last update: 10/04/2025
+;           and selected month/year as a string (e.g., "03/2025" or "all")
+; Returns: EAX = 0 if no transactions found for the user
+; Last update: 14/04/2025
 ;--------------------------------------------------------------------------------
 inputFromTransaction PROC,
-    transaction: PTR userTransaction
+    transaction: PTR userTransaction,
+    selectedMonthYear: PTR BYTE    ; Pointer to a month/year string ("MM/YYYY") or "all"
+    
+    LOCAL monthYearBuffer[8]: BYTE  ; Buffer to hold MM/YYYY + null terminator
+    LOCAL allTransactions: BYTE     ; Flag for showing all transactions
     
     pushad
+    call resetdata
+    ; Check if we should show all transactions
+    INVOKE Str_compare, selectedMonthYear, ADDR allStr  ; Assuming allStr contains "all"
+    .IF ZERO?
+        mov allTransactions, 1
+    .ELSE
+        mov allTransactions, 0
+    .ENDIF
 
     ; Copy out the customer_id and store it into userCustomerID
     mov esi, [transaction]
@@ -812,38 +826,109 @@ searchTransactionLoop:
     ; Compare with input customer_id
     INVOKE Str_compare, ADDR tempBuffer, ADDR userCustomerID
     
-    ; If match found, set flag and process
+    ; If customer_id matches, check if we should process it
     .IF ZERO?
-        ; Found a transaction for this customer! Set flag
-        mov foundTransaction, 1
+        ; If allTransactions flag is set, process this transaction
+        .IF allTransactions == 1
+            ; Found a transaction for this customer! Set flag
+            mov foundTransaction, 1
+            
+            ; Return to the start of this line
+            mov esi, currentLineStart
         
-        ; Return to the start of this line
-        mov esi, currentLineStart
-    
-        ; Parse all fields for this transaction
-        INVOKE parseUserTransaction, transaction
-        
-        ; Process based on transaction type
-        mov edi, transaction
-        add edi, OFFSET userTransaction.transaction_type
-        INVOKE Str_compare, edi, ADDR TransferStr
-        .IF ZERO?
-            INVOKE calculateTotalCredit, transaction
-        .ELSE
-            INVOKE Str_compare, edi, ADDR DepositStr
+            ; Parse all fields for this transaction
+            INVOKE parseUserTransaction, transaction
+            
+            ; Process based on transaction type
+            mov edi, transaction
+            add edi, OFFSET userTransaction.transaction_type
+            INVOKE Str_compare, edi, ADDR TransferStr
             .IF ZERO?
-                INVOKE calculateTotalDebit, transaction
+                INVOKE calculateTotalCredit, transaction
+            .ELSE
+                INVOKE Str_compare, edi, ADDR DepositStr
+                .IF ZERO?
+                    INVOKE calculateTotalDebit, transaction
+                .ENDIF
             .ENDIF
+            
+            INVOKE calculateDailyAverageBalance, transaction
+            INVOKE printUserTransaction, transaction
+            
+            ; Skip to next line after processing
+            jmp searchTransactionLoop
         .ENDIF
         
-        INVOKE calculateDailyAverageBalance, transaction
-        INVOKE printUserTransaction, transaction
+        ; If we're not showing all transactions, need to check the date
+        ; Store the current position
+        push esi
         
-        ; Continue searching for more transactions
-        jmp skipToNextLine
+        ; Skip to date field (9th field)
+        ; Skip fields 3-8
+        mov ecx, 7  ; Need to skip 7 more fields to reach date field
+    skipToDateField:
+        mov edi, OFFSET tempBuffer
+        call ParseCSVField
+        loop skipToDateField
+        
+        ; Parse date field
+        mov edi, OFFSET tempBuffer
+        call ParseCSVField
+        
+        ; Extract month/year from date (format: DD/MM/YYYY)
+        ; Month/Year is at index 3-10 (MM/YYYY)
+        
+        ; Copy month/year part to buffer
+        mov ecx, 7  ; Copy 7 characters (MM/YYYY)
+        mov esi, OFFSET tempBuffer
+        add esi, 3  ; Start at index 3 (MM part)
+        lea edi, monthYearBuffer
+        
+    copyMonthYearLoop:
+        mov al, [esi]
+        mov [edi], al
+        inc esi
+        inc edi
+        loop copyMonthYearLoop
+        
+        mov BYTE PTR [edi], 0  ; Null terminator
+        
+        ; Compare with selected month/year
+        INVOKE Str_compare, ADDR monthYearBuffer, selectedMonthYear
+        
+        ; Restore position for further processing
+        pop esi
+        
+        ; If month/year matches, process the transaction
+        .IF ZERO?
+            ; Found a transaction for this customer in the selected month/year! Set flag
+            mov foundTransaction, 1
+            
+            ; Return to the start of this line
+            mov esi, currentLineStart
+        
+            ; Parse all fields for this transaction
+            INVOKE parseUserTransaction, transaction
+            
+            ; Process based on transaction type
+            mov edi, transaction
+            add edi, OFFSET userTransaction.transaction_type
+            INVOKE Str_compare, edi, ADDR TransferStr
+            .IF ZERO?
+                INVOKE calculateTotalCredit, transaction
+            .ELSE
+                INVOKE Str_compare, edi, ADDR DepositStr
+                .IF ZERO?
+                    INVOKE calculateTotalDebit, transaction
+                .ENDIF
+            .ENDIF
+            
+            INVOKE calculateDailyAverageBalance, transaction
+            INVOKE printUserTransaction, transaction
+        .ENDIF
     .ENDIF
     
-    ; CustomerID didn't match, skip to next line
+    ; Skip to next line
 skipToNextLine:
     mov al, [esi]
     cmp al, 0      ; End of file?
@@ -882,7 +967,9 @@ doneSearching:
     .ENDIF
     
 readTransactionFileExit:
-    INVOKE calculateAverageBalance, transaction
+    .IF foundTransaction == 1
+        INVOKE calculateAverageBalance, transaction
+    .ENDIF
     INVOKE CloseHandle, fileHandle
     popad
     ret
