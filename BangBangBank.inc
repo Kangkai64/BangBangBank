@@ -332,6 +332,8 @@ printMonthlyStatement PROTO,
 
 MSnote PROTO
 
+resetData PROTO
+
 calculateTotalCredit PROTO, 
     transaction: PTR userTransaction
 

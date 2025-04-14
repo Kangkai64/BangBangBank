@@ -12,11 +12,12 @@ leftPad         BYTE 5 DUP(32), 0      ; Left margin padding
 spaceChar       BYTE " ", 0            ; Single space character
 
 ; Month input prompt and validation
-monthPrompt     BYTE "Enter month (MM/YYYY format or 'all'): ", 0
+monthPrompt     BYTE "Enter month (MM/YYYY format or 'all'), or press Enter to go back: ", 0
 invalidFormat   BYTE "Invalid format! Please use MM/YYYY format (e.g., 03/2025) or 'all'.", 0
-selectedMonth   BYTE 16 DUP(0)         ; Buffer to store user-selected month
+selectedMonth   BYTE "all", 0        ; Buffer to store user-selected month, default to "all"
 monthBuffer     BYTE 32 DUP(0)         ; Temporary buffer for month input
 charIndex       DWORD 0                ; Index for character input
+exitflag        DWORD 0                ; Flag to indicate exit from the loop
 
 ; Constant for "all" option
 allOption       BYTE "all", 0
@@ -24,12 +25,11 @@ allOption       BYTE "all", 0
 ; Statement headers and separators
 bankHeader      BYTE "Bang Bang Bank", 0
 bankAddress     BYTE "10th floor, Tower A, Dataran Bang Bang, 1, Jalan Hijau, 59000, Kuala Lumpur", 0
-pageLabel       BYTE "PAGE", 0
-pageNum         BYTE ": 1", 0
+monthLabel       BYTE "Month:", 0
 statementDate   BYTE "STATEMENT DATE: ", 0
 timeOutputBuffer BYTE 32 DUP(?)
 timeDate BYTE 16 DUP(?)
-accountLabel    BYTE "ACCOUNT NUMBER", 0
+accountLabel    BYTE "ACCOUNT NUMBER:", 0
 pidmNotice      BYTE "PROTECTED BY PIDM UP TO RM250,000 FOR EACH DEPOSITOR", 0
 accountType     BYTE "SAVINGS ACCOUNT", 0
 transHeader     BYTE "ACCOUNT TRANSACTIONS", 0
@@ -50,13 +50,6 @@ note1           BYTE "1. All items and balances shown will be considered correct
 note2           BYTE "   discrepancies within 21 days.", 0
 note3           BYTE "2. Please notify any change of address in writing.", 0
 
-menuPrompt      BYTE "Enter your choice:", 0
-menuOption1     BYTE "1. Previous Page", 0
-menuOption2     BYTE "2. Next Page", 0
-menuOption3     BYTE "9. Back to Account Dashboard", 0
-menuNoNext      BYTE "If no next page:", 0
-menuContinue    BYTE "Press any key to continue...", 0
-
 currentTime     SYSTEMTIME <>
 transaction     userTransaction <>
 
@@ -76,16 +69,14 @@ getMonthInput:
     mov al, 0
     rep stosb
 
-    ; Clear the selected month buffer
-    mov ecx, LENGTHOF selectedMonth
-    mov edi, OFFSET selectedMonth
-    mov al, 0
-    rep stosb
-
     ; Reset character index
     mov charIndex, 0
+    
+    ; Reset exit flag
+    mov exitflag, 0
 
     ; Prompt for month
+    INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR monthPrompt
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, INPUT
 
@@ -98,7 +89,19 @@ charInputLoop:
     .IF al == 13
         ; Add null terminator
         mov BYTE PTR [edi], 0
-        jmp validateInput
+        
+        ; Check if input is empty (first character is null)
+        mov edi, OFFSET monthBuffer
+        mov al, BYTE PTR [edi]
+        .IF al == 0
+            ; Set exit flag for empty input
+            mov exitflag, 1
+            INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
+            call Crlf
+            jmp done
+        .ELSE
+            jmp validateInput
+        .ENDIF
     .ENDIF
     
     ; Check for Backspace
@@ -129,11 +132,15 @@ charInputLoop:
     jmp charInputLoop
 
 validateInput:
+    ; Clear the selected month buffer
+    mov ecx, LENGTHOF selectedMonth
+    mov edi, OFFSET selectedMonth
+    mov al, 0
+    rep stosb
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
     call Crlf
     
-    ; Check for "all" option (case insensitive)
-    ;INVOKE Str_ucase, ADDR monthBuffer  ; Convert to uppercase for comparison
+    ; Check for "all" option (case sensitive)
     INVOKE Str_compare, ADDR monthBuffer, ADDR allOption
     .IF ZERO?
         ; User entered "all"
@@ -184,11 +191,16 @@ yearLoop:
     jmp validInput
     
 invalidInput:
+    INVOKE printString, ADDR leftPad	; Invalid format message
     INVOKE printString, ADDR invalidFormat
     call Crlf
     jmp getMonthInput
     
 validInput:
+    ; Make sure exit flag is not set for valid input
+    mov exitflag, 0
+
+done:
     ret
 getSelectedMonth ENDP
 
@@ -241,10 +253,11 @@ printMonthlyStatement PROC,
     LOCAL padLen:DWORD
     LOCAL totalWidth:DWORD
     
+statementLoop:
     mov totalWidth, 90          ; Total width for content
     
-    ; Prompt for month selection
-    call getSelectedMonth
+    ; Skip month selection prompt on first run (it's already set to "all")
+    ; Will only prompt after first statement is displayed
     
     ; Clear the screen
     call Clrscr
@@ -304,7 +317,9 @@ skipAddressPad:
     INVOKE printString, ADDR leftPad
     mov esi, [account]
     add esi, OFFSET userAccount.full_name
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
     INVOKE printString, esi
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
     
     ; Fill the rest of the line with spaces to position right column
     INVOKE Str_length, esi
@@ -319,9 +334,10 @@ padNameLoop:
 skipPadName:
     
     ; Statement information (right column)
-    INVOKE printString, ADDR pageLabel
-    
-    INVOKE printString, ADDR pageNum
+    INVOKE printString, ADDR monthLabel
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
+    INVOKE printString, ADDR selectedMonth
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
     call Crlf
     call Crlf
     
@@ -378,7 +394,9 @@ padAcctLabelLoop:
     
     mov esi, [account]
     add esi, OFFSET userAccount.account_number
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
     INVOKE printString, esi
+    INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
     call Crlf
     call Crlf
     
@@ -440,7 +458,6 @@ skipTransHeaderPad:
     INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR columnHeader
     call Crlf
-    call Crlf
     
     ; Single line
     INVOKE printString, ADDR leftPad
@@ -451,12 +468,16 @@ skipTransHeaderPad:
     mov esi, [account]
     add esi, OFFSET userAccount.customer_id
     INVOKE Str_copy, esi, ADDR transaction.customer_id
-    
+
     ; Transaction details - pass selectedMonth to filter transactions
     INVOKE inputFromTransaction, ADDR transaction, ADDR selectedMonth
+
+    ; Double line
+    INVOKE printString, ADDR leftPad
+    INVOKE printString, ADDR doubleLine
     call Crlf
+
     call printTotal
-    call Crlf
     
     ; Single line
     INVOKE printString, ADDR leftPad
@@ -465,6 +486,17 @@ skipTransHeaderPad:
     
     ; Print notes and menu
     call MSnote
+    
+    ; Now prompt for month filter (after showing the statement)
+    call Crlf
+    call getSelectedMonth
+    
+    ; Check if exit flag is set (indicating empty input)
+    cmp exitflag, 1
+    je done
+    
+    ; Otherwise, continue with the new month filter
+    jmp statementLoop
     
 done:
     STC                            ; Don't logout the user
@@ -494,35 +526,6 @@ MSnote PROC
     INVOKE printString, ADDR note3
     call Crlf
     call Crlf
-    
-    ; Menu options
-    INVOKE printString, ADDR leftPad
-    INVOKE printString, ADDR menuPrompt
-    call Crlf
-    
-    INVOKE printString, ADDR leftPad
-    INVOKE printString, ADDR menuOption1
-    call Crlf
-    
-    INVOKE printString, ADDR leftPad
-    INVOKE printString, ADDR menuOption2
-    call Crlf
-    
-    INVOKE printString, ADDR leftPad
-    INVOKE printString, ADDR menuOption3
-    call Crlf
-    call Crlf
-    
-    INVOKE printString, ADDR leftPad
-    INVOKE printString, ADDR menuNoNext
-    call Crlf
-    call Crlf
-    
-    INVOKE printString, ADDR leftPad
-    INVOKE printString, ADDR menuContinue
-    
-    ; Wait for user input
-    call Wait_Msg
     
     popad
     ret

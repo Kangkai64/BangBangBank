@@ -725,7 +725,7 @@ inputFromTransaction PROC,
     LOCAL allTransactions: BYTE     ; Flag for showing all transactions
     
     pushad
-
+    call resetdata
     ; Check if we should show all transactions
     INVOKE Str_compare, selectedMonthYear, ADDR allStr  ; Assuming allStr contains "all"
     .IF ZERO?
