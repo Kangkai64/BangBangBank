@@ -11,7 +11,7 @@ lineWidth       BYTE 100               ; Width of the entire statement
 leftPad         BYTE 5 DUP(32), 0      ; Left margin padding
 spaceChar       BYTE " ", 0            ; Single space character
 
-selectedMonth   BYTE "03/2025" ,0
+selectedMonth   BYTE "all" ,0
 ; Statement headers and separators
 bankHeader      BYTE "Bang Bang Bank", 0
 bankAddress     BYTE "10th floor, Tower A, Dataran Bang Bang, 1, Jalan Hijau, 59000, Kuala Lumpur", 0
