@@ -72,10 +72,13 @@ IFNDEF __UNICODE__
   DeleteFile equ <DeleteFileA>
 ENDIF
 
+WinExec PROTO, lpCmdLine:PTR BYTE, uCmdShow:DWORD
+
 ;-----------------------------
 ; Symbols from windows.inc
 ;-----------------------------
 ERROR_ALREADY_EXISTS equ 183
+SW_HIDE              equ 0
 
 ;-----------------------------
 ; Helper Function Prototype
@@ -183,6 +186,12 @@ promptForIntChoice PROTO,
     upperBound: BYTE
 
 Wait_Msg PROTO
+
+shrinkConsole PROTO
+
+resizeConsole PROTO
+
+clearConsole PROTO
 
 setTxtColor PROTO,
     colorCode: BYTE,

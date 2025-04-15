@@ -53,7 +53,7 @@
     <MASM Include="validateRecipientAcc.asm" />
     <MASM Include="validateTransactionAmount.asm" />
     <MASM Include="verifyOTP.asm" />
-    <MASM Include="Wait_Msg.asm" />
+    <MASM Include="utility.asm" />
     <MASM Include="inputFromFile.asm" />
     <MASM Include="promptForUsername.asm" />
     <MASM Include="setTxtColor.asm" />

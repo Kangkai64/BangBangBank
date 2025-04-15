@@ -33,7 +33,7 @@ interestFlag BYTE 0
 displayCustomerMenu PROC,
 	user: PTR userCredential
 
-	call Clrscr
+	call clearConsole
 	start:
 	; Get current time and format it in DD/MM/YYYY HH:MM:SS format
 	INVOKE GetLocalTime, ADDR currentTime
@@ -69,7 +69,7 @@ displayCustomerMenu PROC,
 		INVOKE checkInterest, ADDR account
 		mov eax, 1
 		mov DWORD PTR interestFlag, eax
-		call Clrscr
+		call clearConsole
 	.ENDIF
 	
 

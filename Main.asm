@@ -13,19 +13,20 @@ TITLE  BangBangBank(.asm)
 INCLUDE BangBangBank.inc
 
 .data
-
+titleStr BYTE "Bang Bang Bank Application Program", 0
 
 .code
 main PROC
-	
+	INVOKE SetConsoleTitle, ADDR titleStr
+
 	mainMenu:
 		call displayMainMenu
 		.IF CARRY?
-			call Clrscr
+			call clearConsole
 		.ENDIF
 		jc mainMenu
 
-	call Clrscr
+	call clearConsole
 	INVOKE displayLogo
 	call Crlf
 	exit

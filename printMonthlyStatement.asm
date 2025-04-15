@@ -264,7 +264,7 @@ statementLoop:
     ; Will only prompt after first statement is displayed
     
     ; Clear the screen
-    call Clrscr
+    call clearConsole
     
     ; Print left margin padding
     INVOKE printString, ADDR leftPad
@@ -496,7 +496,7 @@ skipTransHeaderPad:
     call getSelectedMonth
     
     ; Check if exit flag is set (indicating empty input)
-    call clrscr
+    call clearConsole
     cmp exitflag, 1
     je done
     

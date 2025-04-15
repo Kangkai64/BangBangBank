@@ -5,7 +5,7 @@
     <MASM Include="printString.asm" />
     <MASM Include="displayMainMenu.asm" />
     <MASM Include="promptForIntChoice.asm" />
-    <MASM Include="Wait_Msg.asm" />
+    <MASM Include="utility.asm" />
     <MASM Include="login.asm" />
     <MASM Include="setTxtColor.asm" />
     <MASM Include="encrypt.asm" />
