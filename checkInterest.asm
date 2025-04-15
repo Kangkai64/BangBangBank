@@ -5,7 +5,7 @@ INCLUDE BangBangBank.inc
 ; This module will check user have interest or not
 ; Receives : Nothing
 ; Returns : Nothing
-; Last update: 5/4/2025
+; Last update: 15/4/2025
 ;-----------------------------------------------------------
 
 .data
@@ -17,6 +17,7 @@ noInterestMsg       BYTE NEWLINE, "You didn't earn any interest, or it had alrea
 dayBuffer           BYTE 3 DUP(0)
 monthBuffer         BYTE 3 DUP(0)
 yearBuffer          BYTE 5 DUP(0)
+line                BYTE "=================================================================", NEWLINE, NEWLINE, 0
 openDayInteger      DWORD 0
 openMonthInteger    DWORD 0
 openYearInteger     DWORD 0
@@ -25,9 +26,21 @@ currMonthInteger    DWORD 0
 currYearInteger     DWORD 0
 balance             DWORD ?
 interestAppliedMsg  BYTE NEWLINE, "Interest has been applied to your account!", 0
-newBalanceMsg       BYTE "New Balance: ", 0
+interestTransMsg    BYTE "Interest from BangBangBank", 0
+newBalanceMsg       BYTE "New Balance     : RM ", 0
+interestAmountMsg   BYTE "Interest Amount : RM ", 0
 tempInterest        DWORD ?
 newBalance          DWORD ?
+decimalPoint BYTE ".", 0
+leadingZero BYTE "0", 0
+balanceStr BYTE 20 DUP(0)  
+interestStr BYTE 20 DUP(0)
+newTransactionId BYTE 255 DUP(?)
+interestRecord userTransaction <>
+transferTypeStr BYTE "Interest", 0
+
+; File paths
+transactionFileName    BYTE "Users\transactionLog.txt", 0
 
 .code
 
@@ -179,7 +192,8 @@ parseCurrentDate ENDP
 checkInterest PROC,
     account: PTR userAccount
     pushad                          ; Save all registers
-
+    INVOKE displayLogo
+    INVOKE printString, ADDR line
     ; Get current time and format it in DD/MM/YYYY format
 	INVOKE GetLocalTime, ADDR currentTime
 	INVOKE formatSystemTime, ADDR currentTime, ADDR timeOutputBuffer
@@ -242,29 +256,146 @@ compare_date:
 
     
 add_interest: 
-
     ; Formula = balance * 0.03
     mov eax, balance
     mov ebx, 3
     mul ebx
-    mov edx, 0
+    add eax, 50     ; For rounding 
     mov ebx, 100
-    div ebx         ; EAX = balance * 3 /100 = balance * 0.03
-
+    div ebx         ; EAX = (balance * 3 + 50) /100, EDX = remainder
     mov tempInterest, eax
 
-    ; Calculate new balance (balance + interest)
-    mov eax, balance
-    add eax, tempInterest
+    ; Calculate new balance 
+    mov eax, tempInterest
+    add eax, balance
+    ; Store new balance
     mov newBalance, eax
-    INVOKE printString, ADDR newBalanceMsg
-    mov eax, newBalance
-    call WriteDecimalNumber
-    call Crlf
-    call Crlf
 
-    jmp done
+    ; Convert tempInterest to rm and cents format in interestStr
+    mov eax, tempInterest
+    mov edx, 0
+    mov ebx, 100
+    div ebx         ; EAX = rm, EDX = cents
+
+    ; Create formatted interest string
+    lea edi, interestStr    ; Point to output buffer
+
+    ; Convert rm to string
+    push edx               ; Save cents temporarily
+    call IntToString       ; EDI now points after rm
+    dec edi                ; Move back before the null terminator
+
+    ; Add decimal point
+    mov BYTE PTR [edi], '.'
+    inc edi
+
+    ; Handle cents with leading zero if needed
+    pop eax                ; Get cents into EAX for conversion
+    cmp eax, 10
+    jae interest_no_leading_zero
+
+    ; Add leading zero for cents < 10
+    mov BYTE PTR [edi], '0'
+    inc edi
+
+    interest_no_leading_zero:
+    ; Convert cents to string
+    call IntToString       ; EDI now points after cents
     
+    ; Convert newBalance to rm and cents 
+    mov eax, newBalance
+    mov edx, 0
+    mov ebx, 100
+    div ebx         ; EAX = rm, EDX = cents
+
+    ; Create formatted balance string
+    lea edi, balanceStr    ; Point to output buffer
+    
+    ; Convert rm to string
+    push edx               ; Save cents temporarily
+    call IntToString       ; EDI now points after rm
+    dec edi                ; Move back before the null terminator
+    
+    ; Add decimal point
+    mov BYTE PTR [edi], '.'
+    inc edi
+    
+    ; Handle cents with leading zero if needed
+    pop eax                ; Get cents into EAX for conversion
+    cmp eax, 10
+    jae no_leading_zero
+    
+    ; Add leading zero for cents < 10
+    mov BYTE PTR [edi], '0'
+    inc edi
+    
+no_leading_zero:
+    ; Convert cents to string
+    call IntToString       ; EDI now points after cents
+    
+    ; Display the combined balance string
+    INVOKE printString, ADDR interestAmountMsg
+    INVOKE printString, ADDR interestStr
+    call Crlf
+    INVOKE printString, ADDR newBalanceMsg
+    INVOKE printString, ADDR balanceStr
+    
+    ; Display interest applied message
+    call Crlf
+    INVOKE printString, ADDR interestAppliedMsg
+    
+    ; Store new balance in account structure
+    mov esi, account
+    add esi, OFFSET userAccount.account_balance
+    INVOKE Str_copy, ADDR balanceStr, esi
+
+    ; Update the user account file with new balance
+    INVOKE updateUserAccountFile, account
+
+    ; Save record
+    INVOKE generateTransactionId, ADDR newTransactionId
+
+    ; Format transaction record with the values
+    ; Copy transaction ID
+    INVOKE Str_copy, ADDR newTransactionId, ADDR interestRecord.transaction_id
+
+    ; Copy customer id from the sender
+    mov esi, account
+    add esi, OFFSET userAccount.customer_id
+    INVOKE Str_copy, esi, ADDR interestRecord.customer_id
+
+    ; Copy customer account number from the sender
+    mov esi, account
+    add esi, OFFSET userAccount.account_number
+    INVOKE Str_copy, esi, ADDR interestRecord.sender_account_number
+
+    ; Set transaction type as "Interest"
+    INVOKE Str_copy, ADDR transferTypeStr, ADDR interestRecord.transaction_type
+
+    ; Format amount with plus sign (for interest)
+    mov al, '+'
+    mov interestRecord.amount[0], al ; Set first character as '+'
+    INVOKE Str_copy, ADDR interestStr, ADDR (interestRecord.amount+1)
+
+    ; Copy updated account balance
+    INVOKE Str_copy, ADDR balanceStr, ADDR interestRecord.balance
+
+    ; Copy transaction detail
+    INVOKE Str_copy, ADDR interestTransMsg, ADDR interestRecord.transaction_detail
+
+    ; Copy date
+    INVOKE Str_copy, ADDR timeDate, ADDR interestRecord.date
+
+    ; Copy time
+    lea esi, timeOutputBuffer
+    add esi, 11 ; Skip date part
+    INVOKE Str_copy, esi, ADDR interestRecord.time
+
+    ; Insert the transaction log
+    INVOKE insertTransaction, ADDR interestRecord
+    call Wait_Msg
+    jmp done
+
 end_compare:
     INVOKE printString, ADDR noInterestMsg
     call Wait_Msg
