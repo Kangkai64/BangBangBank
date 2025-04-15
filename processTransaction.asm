@@ -41,6 +41,9 @@ formattedTransactionAmount BYTE 32 DUP(0)
 newTransactionId BYTE 255 DUP(?)
 transactionRecord userTransaction <>
 transferTypeStr BYTE "Transfer", 0
+feeApplied BYTE 0      ; Flag: 0 = no fee, 1 = fee applied
+oneHundredStr BYTE "100", 0  ; RM 1.00 as 100 cents
+extraFeeMsg BYTE "Extra Fee: RM 1.00 (exceeded daily limit)", NEWLINE, 0
 
 .code
 processTransaction PROC,
@@ -88,8 +91,7 @@ processTransaction PROC,
 
     ; Prompt for transaction amount
     INVOKE promptForTransactionAmount, ADDR inputTransactionAmount, account
-    INVOKE validateTransactionAmount, ADDR inputTransactionAmount, account
-
+    INVOKE validateTransactionAmount, ADDR inputTransactionAmount, ADDR feeApplied, account
     jc done ; Invalid transaction amount
 
     ; Prompt for transaction detail
@@ -131,6 +133,12 @@ confirmTransaction:
     INVOKE addDecimalPoint, ADDR inputTransactionAmount, ADDR formattedTransactionAmount
     INVOKE printString, ADDR formattedTransactionAmount
     Call Crlf
+
+    ; Show fee if applicable
+    cmp feeApplied, 1
+    jne skip_fee_message
+    INVOKE printString, ADDR extraFeeMsg
+skip_fee_message:
 
     ; Print transaction detail
     INVOKE printString, ADDR transactionDetailMsg
@@ -213,6 +221,12 @@ validateOTP:
         ; Calculate and set new balance (current balance - transfer amount)
         INVOKE decimalArithmetic, ADDR formattedTransactionAmount, ADDR inputTransactionAmount, ADDR tempBuffer, '-'
 
+        ; If fee applies, subtract an additional RM 1.00
+        cmp feeApplied, 1
+        jne skip_fee_charge
+        INVOKE decimalArithmetic, ADDR tempBuffer, ADDR oneHundredStr, ADDR tempBuffer, '-'
+
+skip_fee_charge:
         ; Add decimal point back to the result
         INVOKE addDecimalPoint, ADDR tempBuffer, esi
 

@@ -47,6 +47,7 @@ foundAccount          BYTE 0
 foundTransaction      BYTE 0
 inputUsername         BYTE 64 DUP(?)
 userCustomerID        BYTE 32 DUP(?)
+senderAccNo           BYTE 32 DUP(?)
 userAccountNumber     BYTE 32 DUP(?)
 fieldIndex            DWORD 0
 totalCredit   BYTE 32 DUP('0'), 0  ; Buffer for storing credit total as string
@@ -976,6 +977,222 @@ readTransactionFileExit:
 inputFromTransaction ENDP
 
 ;--------------------------------------------------------------------------------
+; inputTotalTransactionFromTransaction PROC
+; This procedure reads user transaction data from a single file by sender account number
+; Receives: Pointer to userTransaction structure (transaction) with sender account number filled
+; Returns: EAX = 0 if the user transaction is not found
+; Last update: 10/04/2025
+;--------------------------------------------------------------------------------
+inputTotalTransactionFromTransaction PROC,
+    transaction: PTR userTransaction,
+    timeDate: PTR BYTE,
+    dailyTotalTransactions: PTR BYTE
+    
+    LOCAL tempAmount[32]:BYTE
+    
+    pushad
+    
+    ; Initialize dailyTotalTransactions to zero
+    ; This ensures we start with a clean slate each time
+    mov edi, dailyTotalTransactions
+    mov ecx, 32  ; Assuming dailyTotalTransactions is 32 bytes
+    mov al, '0'
+init_loop:
+    mov [edi], al
+    inc edi
+    loop init_loop
+    mov BYTE PTR [edi-1], 0  ; Null terminate
+    
+    ; Copy out the account number
+    mov esi, [transaction]
+    add esi, OFFSET userTransaction.sender_account_number
+    INVOKE Str_copy, esi, ADDR senderAccNo
+    
+    ; Open the transaction file
+    INVOKE CreateFile, 
+        ADDR transactionFileName,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+        
+    mov fileHandle, eax
+    
+    ; Check if file opened successfully
+    cmp eax, INVALID_HANDLE_VALUE
+    jne fileOpenSuccess
+    
+    ; File open error
+    INVOKE printString, ADDR transactionFileName
+    call Crlf
+    INVOKE printString, ADDR errorMsg
+    call Wait_Msg
+    mov foundTransaction, 0  ; Set not found flag
+    jmp readTransactionFileExit
+    
+fileOpenSuccess:
+    ; Read file content
+    INVOKE ReadFile, 
+        fileHandle,
+        ADDR readBuffer,
+        SIZEOF readBuffer - 1,
+        ADDR bytesRead,
+        NULL
+    
+    ; Check if read was successful
+    .IF eax == 0
+        INVOKE printString, ADDR errorMsg
+        call Wait_Msg
+        mov foundTransaction, 0  ; Set not found flag
+        jmp readTransactionFileExit
+    .ENDIF
+
+    ; Add null terminator
+    mov edi, OFFSET readBuffer
+    add edi, bytesRead
+    mov BYTE PTR [edi], 0
+    
+    ; Skip the header line
+    mov esi, OFFSET readBuffer
+    
+skipHeaderLoop:
+    mov al, [esi]
+    cmp al, 0          ; End of buffer?
+    je transactionNotFound ; File is empty or only has header
+    cmp al, 10         ; LF - new line?
+    je foundDataStart
+    cmp al, 13         ; CR?
+    je skipCR
+    inc esi
+    jmp skipHeaderLoop
+    
+skipCR:
+    inc esi            ; Skip CR
+    cmp BYTE PTR [esi], 10  ; Check for LF
+    jne skipHeaderLoop
+    ; Fall through to foundDataStart
+
+foundDataStart:
+    inc esi            ; Skip LF to get to start of data
+    
+    ; Set foundTransaction flag to 0 (not found)
+    mov foundTransaction, 0
+    
+searchTransactionLoop:
+    ; Check if we've reached end of buffer
+    mov al, [esi]
+    cmp al, 0          ; End of buffer?
+    je doneSearching
+
+    ; Store current line start
+    mov currentLineStart, esi
+    
+    ; Parse transaction_id field from current line (first field)
+    mov edi, OFFSET tempBuffer
+    call ParseCSVField
+
+    ; Parse customer_id field (second field)
+    mov edi, OFFSET tempBuffer
+    call ParseCSVField
+    
+    ; Parse sender_account_number field
+    mov edi, OFFSET tempBuffer
+    call ParseCSVField
+    
+    ; Compare with input sender account number
+    INVOKE Str_compare, ADDR tempBuffer, ADDR senderAccNo
+    
+    ; If account matches
+    .IF ZERO?
+        ; Return to line start and parse transaction
+        mov esi, currentLineStart
+
+        ; Parse all fields for this transaction
+        INVOKE parseUserTransaction, transaction
+        
+        ; Check if transaction type is "Transfer"
+        mov edi, transaction
+        add edi, OFFSET userTransaction.transaction_type
+        INVOKE Str_compare, edi, ADDR TransferStr
+        .IF ZERO?
+            ; Check if date matches
+            mov edi, transaction
+            add edi, OFFSET userTransaction.date
+            
+            INVOKE Str_compare, edi, timeDate
+            .IF ZERO?
+                ; Found a transaction for this customer! Set flag
+                mov foundTransaction, 1
+
+                ; Found matching transaction!
+                mov esi, transaction
+                add esi, OFFSET userTransaction.amount
+
+                ; For debugging: print amount
+                ;INVOKE printString, esi
+                ;call Crlf
+
+                ; Remove decimal point
+                INVOKE removeDecimalPoint, esi, ADDR tempAmount
+                
+                ; Add to running total
+                INVOKE decimalArithmetic, dailyTotalTransactions, ADDR tempAmount, dailyTotalTransactions, '+'
+                
+                ; For debugging: print running total
+                ;INVOKE printString, dailyTotalTransactions
+                ;call Crlf
+            .ENDIF
+        .ENDIF
+    .ENDIF
+    
+    ; Skip to next line - IMPORTANT to continue search
+    mov esi, currentLineStart
+skipToNextLine:
+    mov al, [esi]
+    cmp al, 0      ; End of file?
+    je doneSearching
+    cmp al, 10     ; LF?
+    je nextLine
+    cmp al, 13     ; CR?
+    je skipToNextCR
+    inc esi
+    jmp skipToNextLine
+    
+skipToNextCR:
+    inc esi        ; Skip CR
+    cmp BYTE PTR [esi], 10  ; Check for LF
+    jne skipToNextLine
+    ; Fall through to nextLine
+
+nextLine:
+    inc esi        ; Skip LF
+    jmp searchTransactionLoop  ; CONTINUE SEARCH!
+
+transactionNotFound:
+    mov eax, FALSE
+    mov [esp+28], eax  ; Return FALSE
+    jmp readTransactionFileExit
+    
+doneSearching:
+    ; If we found at least one transaction, return success
+    .IF foundTransaction == 1
+        mov eax, TRUE
+        mov [esp+28], eax
+    .ELSE
+        mov eax, FALSE
+        mov [esp+28], eax
+    .ENDIF
+    
+    
+readTransactionFileExit:
+    INVOKE CloseHandle, fileHandle
+    popad
+    ret
+inputTotalTransactionFromTransaction ENDP
+
+;--------------------------------------------------------------------------------
 ; parseUserTransaction PROC
 ; Parses all transaction fields for the current user and fills the structure
 ; Receives: ESI = pointer to start of transaction record in buffer
@@ -1068,4 +1285,15 @@ parseNextTransactionField:
 doneParsingFields:
     ret
 parseUserTransaction ENDP
+
+str_initZero PROC,
+    pBuffer: PTR BYTE
+    
+    pushad
+    mov edi, [pBuffer]
+    mov BYTE PTR [edi], '0'  ; Set first character to '0'
+    mov BYTE PTR [edi+1], 0  ; Null-terminate
+    popad
+    ret
+str_initZero ENDP
 END

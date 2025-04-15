@@ -171,6 +171,9 @@ decimalDivide PROTO,
     num2: PTR BYTE,
     result: PTR BYTE
 
+str_initZero PROTO,
+    pBuffer: PTR BYTE
+
 ;-------------------------
 ; Procedure Prototype
 ;-------------------------
@@ -265,6 +268,11 @@ inputFromTransaction PROTO,
     transaction: PTR userTransaction,
     selectedMonth: PTR BYTE
 
+inputTotalTransactionFromTransaction PROTO,
+    transaction: PTR userTransaction,
+    timeDate: PTR BYTE,
+    dailyTotalTransaction: PTR BYTE
+
 validateLoginTime PROTO,
     user: PTR userCredential
 
@@ -281,6 +289,7 @@ validatePasswordComplexity PROTO,
 
 validateTransactionAmount PROTO,
     inputTransactionAmountAddress: PTR BYTE,
+    feeApplied: PTR BYTE,
     account: PTR userAccount
 
 updateFile PROTO,
