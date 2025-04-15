@@ -6,6 +6,7 @@ totalDebit    BYTE 32 DUP('0'), 0  ; Buffer for storing debit total as string
 totalBalance    BYTE 32 DUP('0'), 0  ; Buffer for storing balance total as string
 balanceCount    BYTE 32 DUP('0'), 0 ; Buffer for storing balance count as string
 averageBalance    BYTE 32 DUP('0'), 0  ; Buffer for storing average balance as string
+emptyValue    BYTE 32 DUP('0'), 0 ; Buffer for storing empty value as string
 tempAmount    BYTE 32 DUP(0)       ; Temporary buffer for processing amounts
 lastBalanceForDate    BYTE 32 DUP(0)       ; Temporary buffer for processing amounts
 dateBuffer    BYTE 32 DUP('0'), 0  ; Buffer for storing date
@@ -15,6 +16,7 @@ creditMsg     BYTE "Total Credit: RM", 0
 debitMsg      BYTE "Total Debit: RM", 0
 balanceMsg      BYTE "Average Balance: RM", 0
 incremental     BYTE '1', 0
+emptyOutput     BYTE ' -',0
 leftPad         BYTE 5 DUP(32), 0      ; Left margin padding
 .code
 ;----------------------------------------------------------------------
@@ -224,24 +226,48 @@ calculateDailyAverageBalance ENDP
 ;----------------------------------------------------------------------
 printTotal PROC
     pushad
+    INVOKE Str_compare, ADDR totalCredit, ADDR emptyValue  
+    .IF ZERO?
+    INVOKE printString, ADDR leftPad
+    INVOKE printString, ADDR creditMsg
+    INVOKE printString, ADDR emptyOutput
+    call CRLF
+    .ELSE
     INVOKE addDecimalPoint, ADDR totalCredit, ADDR tempAmount
     ; Display the credit total
     INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR creditMsg
     INVOKE printString, ADDR tempAmount
     call CRLF
+    .ENDIF
+    INVOKE Str_compare, ADDR totalDebit, ADDR emptyValue
+    .IF ZERO?
+    INVOKE printString, ADDR leftPad
+    INVOKE printString, ADDR debitMsg
+    INVOKE printString, ADDR emptyOutput
+    call CRLF
+    .ELSE
     INVOKE addDecimalPoint, ADDR totalDebit, ADDR tempAmount
     ; Display the debit total
     INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR debitMsg
     INVOKE printString, ADDR tempAmount
     call CRLF
+    .ENDIF
+    INVOKE Str_compare, ADDR averageBalance, ADDR emptyValue
+    .IF ZERO?
+    INVOKE printString, ADDR leftPad
+    INVOKE printString, ADDR balanceMsg
+    INVOKE printString, ADDR emptyOutput
+    call CRLF
+    .ELSE
     INVOKE addDecimalPoint, ADDR averageBalance, ADDR tempAmount
     ; Display the debit total
     INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR balanceMsg
     INVOKE printString, ADDR tempAmount
     call CRLF
+    .ENDIF
     popad
     ret
 printTotal ENDP
