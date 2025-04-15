@@ -1141,6 +1141,242 @@ done:
 Str_find ENDP
 
 ;------------------------------------------------------------------------
+; Str_replace - Replaces all occurrences of a substring with another string
+; 
+; Receives: sourceStr = pointer to the source string (null-terminated)
+;           findStr = pointer to the substring to find (null-terminated)
+;           replStr = pointer to the replacement string (null-terminated)
+;           destStr = pointer to destination buffer
+;           destSize = size of the destination buffer in bytes
+; 
+; Returns:  EAX = number of replacements made
+;           Destination buffer contains the modified string
+;           CF = 1 if destination buffer was too small, 0 otherwise
+;------------------------------------------------------------------------
+Str_replace PROC USES ebx ecx edx esi edi,
+    sourceStr: PTR BYTE,    ; Pointer to the source string
+    findStr: PTR BYTE,      ; Pointer to substring to find
+    replStr: PTR BYTE,      ; Pointer to replacement string
+    destStr: PTR BYTE,      ; Pointer to destination buffer
+    destSize: DWORD         ; Size of destination buffer
+    
+    LOCAL sourceLen: DWORD,
+          findLen: DWORD,
+          replLen: DWORD,
+          destIndex: DWORD,
+          sourceIndex: DWORD,
+          replacements: DWORD,
+          findPos: DWORD
+    
+    ; Initialize counters and indices
+    mov destIndex, 0
+    mov sourceIndex, 0
+    mov replacements, 0
+    
+    ; Get the lengths of strings
+    INVOKE Str_length, sourceStr
+    mov sourceLen, eax
+    
+    INVOKE Str_length, findStr
+    mov findLen, eax
+    
+    ; If find string is empty, just copy source to dest
+    .IF eax == 0
+        INVOKE Str_copy, sourceStr, destStr
+        mov eax, 0      ; No replacements made
+        CLC             ; Clear carry flag (success)
+        jmp done
+    .ENDIF
+    
+    INVOKE Str_length, replStr
+    mov replLen, eax
+    
+    ; Main replacement loop
+    .WHILE TRUE
+        mov findPos, -1         ; Initialize to -1 (not found)
+        mov ebx, sourceIndex    ; Current position in source string
+        
+        ; Check if we've reached the end of the source string
+        mov eax, sourceLen
+        sub eax, findLen
+        .IF ebx > eax
+            jmp copy_remainder ; No more space to find substring
+        .ENDIF
+        
+    find_loop:
+        ; Check if we're past the end of source string minus find length
+        mov eax, sourceLen
+        sub eax, findLen
+        .IF ebx > eax
+            jmp find_done      ; No more places to check
+        .ENDIF
+        
+        ; Compare substring at current position
+        mov esi, sourceStr     ; Source string
+        add esi, ebx           ; Add current position
+        mov edi, findStr       ; Find string
+        mov ecx, findLen       ; Length to compare
+        push ebx               ; Save our position
+
+        push ecx               ; Save counter
+        mov edx, 1             ; Assume strings match (1=match, 0=no match)
+        
+    compare_loop:
+        mov al, [esi]          ; Get byte from source string
+        mov ah, [edi]          ; Get byte from find string
+        cmp al, ah             ; Compare bytes
+        jne no_match           ; Jump if not equal
+        inc esi                ; Move to next byte in source
+        inc edi                ; Move to next byte in find
+        dec ecx                ; Decrement counter
+        jnz compare_loop       ; Continue if more bytes to compare
+        jmp compare_done       ; All bytes matched
+        
+    no_match:
+        mov edx, 0             ; Mark as no match
+        
+    compare_done:
+        pop ecx                ; Restore counter
+        pop ebx                ; Restore position
+        
+        ; Check if all bytes matched
+        .IF edx == 1           ; All bytes matched
+            mov findPos, ebx   ; Store position where found
+            jmp find_done      ; Exit the find loop
+        .ENDIF
+        
+        ; Move to next position in source string
+        inc ebx
+        jmp find_loop
+        
+    find_done:
+        ; Check if substring was found
+        .IF findPos == -1
+            jmp copy_remainder ; Not found, copy remaining
+        .ENDIF
+        
+        ; Copy characters up to the found substring
+        mov ecx, findPos
+        sub ecx, sourceIndex   ; Calculate number of chars to copy
+        .IF ecx > 0
+            ; Check if destination has enough space
+            mov eax, destIndex
+            add eax, ecx
+            .IF eax >= destSize
+                STC         ; Set carry flag (buffer too small)
+                jmp done
+            .ENDIF
+            
+        ; Copy the characters byte by byte
+            mov esi, sourceStr
+            add esi, sourceIndex
+            mov edi, destStr
+            add edi, destIndex
+            
+        copy_prefix_loop:
+            mov al, [esi]      ; Get byte from source
+            mov [edi], al      ; Copy to destination
+            inc esi            ; Next source byte
+            inc edi            ; Next destination byte
+            dec ecx            ; Decrement counter
+            jnz copy_prefix_loop
+            
+            ; Update destination index
+            mov eax, findPos
+            sub eax, sourceIndex
+            add destIndex, eax
+        .ENDIF
+        
+        ; Check if destination has enough space for replacement string
+        mov eax, destIndex
+        add eax, replLen
+        .IF eax >= destSize
+            STC         ; Set carry flag (buffer too small)
+            jmp done
+        .ENDIF
+        
+        ; Copy the replacement string byte by byte
+        mov ecx, replLen
+        .IF ecx > 0
+            mov esi, replStr
+            mov edi, destStr
+            add edi, destIndex
+            
+        copy_repl_loop:
+            mov al, [esi]      ; Get byte from replacement
+            mov [edi], al      ; Copy to destination
+            inc esi            ; Next replacement byte
+            inc edi            ; Next destination byte
+            dec ecx            ; Decrement counter
+            jnz copy_repl_loop
+            
+            ; Update destination index
+            mov eax, replLen
+            add destIndex, eax
+        .ENDIF
+        
+        ; Move source index past the found substring
+        mov eax, findPos
+        sub eax, sourceIndex
+        add sourceIndex, eax   ; Move to start of found substring
+        mov eax, findLen
+        add sourceIndex, eax   ; Skip past found substring
+        
+        ; Increment replacement counter
+        inc replacements
+    .ENDW
+    
+copy_remainder:
+    ; Copy the rest of the source string byte by byte
+    mov ecx, sourceLen
+    sub ecx, sourceIndex
+    .IF ecx > 0
+        ; Check if destination has enough space
+        mov eax, destIndex
+        add eax, ecx
+        .IF eax >= destSize
+            STC         ; Set carry flag (buffer too small)
+            jmp done
+        .ENDIF
+        
+        ; Copy the characters byte by byte
+        mov esi, sourceStr
+        add esi, sourceIndex
+        mov edi, destStr
+        add edi, destIndex
+        
+    copy_remain_loop:
+        mov al, [esi]      ; Get byte from source
+        mov [edi], al      ; Copy to destination
+        inc esi            ; Next source byte
+        inc edi            ; Next destination byte
+        dec ecx            ; Decrement counter
+        jnz copy_remain_loop
+        
+        ; Update destination index
+        mov eax, sourceLen
+        sub eax, sourceIndex
+        add destIndex, eax
+    .ENDIF
+    
+    ; Null-terminate the destination string
+    mov eax, destIndex
+    .IF eax < destSize
+        mov edi, destStr
+        add edi, eax
+        mov BYTE PTR [edi], 0
+        CLC         ; Clear carry flag (success)
+    .ELSE
+        STC         ; Set carry flag (buffer too small)
+    .ENDIF
+    
+done:
+    ; Return the number of replacements made
+    mov eax, replacements
+    ret
+Str_replace ENDP
+
+;------------------------------------------------------------------------
 ; This module validates and formats decimal transaction input
 ; Receives : The address / pointer of the transactionAmount variable
 ; Returns : Set carry flag if invalid, Clear if valid

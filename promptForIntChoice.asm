@@ -5,7 +5,7 @@ INCLUDE BangBangBank.inc
 ; This module will prompt and get the user's menu integer choice.
 ; If the input is invalid, the carry flag is set.
 ; Receives : The upper bound of choice, the lower bound of choice
-; Returns : User's choice in EAX
+; Returns : User's choice in AL
 ; Last update: 13/3/2025
 ;-----------------------------------------------------------------
 

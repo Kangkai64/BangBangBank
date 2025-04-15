@@ -140,6 +140,13 @@ Str_find PROTO,
     sourceStr: PTR BYTE,
     subString: PTR BYTE
 
+Str_replace PROTO,
+    sourceStr: PTR BYTE,    
+    findStr: PTR BYTE,      
+    replStr: PTR BYTE,     
+    destStr: PTR BYTE,      
+    destSize: DWORD        
+
 validateDecimalInput PROTO,
     inputAddress: PTR BYTE
 
@@ -341,7 +348,13 @@ verifyOTP PROTO,
 processDeposit PROTO,
     account: PTR userAccount
 
-switchAccount PROTO
+switchAccount PROTO,
+    account: PTR userAccount,
+    user: PTR userCredential
+
+listAccount PROTO,
+    account: PTR userAccount,
+    accountBuffer: PTR BYTE
 
 getSelectedMonth PROTO
 

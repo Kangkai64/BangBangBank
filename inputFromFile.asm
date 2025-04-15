@@ -49,6 +49,7 @@ inputUsername         BYTE 64 DUP(?)
 userCustomerID        BYTE 32 DUP(?)
 senderAccNo           BYTE 32 DUP(?)
 userAccountNumber     BYTE 32 DUP(?)
+tempAccountNumber     BYTE 32 DUP(?)
 fieldIndex            DWORD 0
 totalCredit   BYTE 32 DUP('0'), 0  ; Buffer for storing credit total as string
 totalDebit    BYTE 32 DUP('0'), 0  ; Buffer for storing debit total as string
@@ -65,9 +66,14 @@ fileRenameErrorMsg    BYTE "Error: Could not rename temporary file", 0
 
 ; CSV formatting
 commaChar             BYTE ",", 0
-zeroVal               BYTE "0", 0
-dashVal               BYTE "-", 0
+
+; Formatting characters
 spaceChar             BYTE " ", 0
+periodChar            BYTE ".", 0
+periodSpace           BYTE ". ", 0
+spaceOpenParen        BYTE " (", 0
+closeParen            BYTE ")", 0
+currentAccPointer     BYTE " <--- Current Account ", 0
 
 ; Transaction type strings
 DepositStr            BYTE "Deposit", 0
@@ -602,6 +608,226 @@ readAccountFileExit:
     popad
     ret
 inputFromAccountByAccNo ENDP
+
+;--------------------------------------------------------------------------------
+; listAccount PROC
+; This procedure lists all accounts associated with a customer ID
+; Receives: Pointer to customer_id string
+;           Pointer to buffer to store account numbers
+; Returns: EAX = number of accounts found
+;          Buffer filled with account numbers
+; Last update: 15/4/2025
+;--------------------------------------------------------------------------------
+listAccount PROC,
+    account: PTR userAccount,
+    accountBuffer: PTR BYTE
+    
+    LOCAL accountCount:DWORD
+    LOCAL lineNumber:DWORD
+    LOCAL accountPtrs[5]:DWORD
+    
+    pushad
+    
+    ; Initialize account counter
+    mov accountCount, 0
+    
+    ; Copy the customer ID to search for
+    mov esi, [account]
+    add esi, OFFSET userAccount.customer_id
+    INVOKE Str_copy, esi, ADDR userCustomerID
+
+    ; Copy the account number to indicate current account
+    mov esi, [account]
+    add esi, OFFSET userAccount.account_number
+    INVOKE Str_copy, esi, ADDR userAccountNumber
+
+    ; Initialize array of pointers to accountBuffer
+    mov ecx, 5                      ; Max 5 accounts
+    mov edi, accountBuffer
+    lea ebx, accountPtrs
+
+initPtrArrayLoop:
+    mov [ebx], edi                   ; Store pointer in array
+    add ebx, 4                       ; Next pointer
+    add edi, 20                      ; Next account slot (20 chars per account)
+    loop initPtrArrayLoop
+
+    ; Open the account file
+    INVOKE CreateFile, 
+        ADDR accountFileName,            ; lpFileName
+        GENERIC_READ,                    ; dwDesiredAccess
+        FILE_SHARE_READ,                 ; dwShareMode
+        NULL,                            ; lpSecurityAttributes
+        OPEN_EXISTING,                   ; dwCreationDisposition
+        FILE_ATTRIBUTE_NORMAL,           ; dwFlagsAndAttributes
+        NULL                             ; hTemplateFile
+        
+    mov fileHandle, eax
+    
+    ; Check if file opened successfully
+    cmp eax, INVALID_HANDLE_VALUE
+    jne listFileOpenSuccess
+    
+    ; File open error
+    INVOKE printString, ADDR accountFileName
+    call Crlf
+    INVOKE printString, ADDR errorMsg
+    call Wait_Msg
+    jmp listAccountFileExit
+    
+listFileOpenSuccess:
+    ; Read file content into buffer
+    INVOKE ReadFile, 
+        fileHandle,                     ; hFile
+        ADDR readBuffer,                ; lpBuffer
+        SIZEOF readBuffer - 1,          ; nNumberOfBytesToRead
+        ADDR bytesRead,                 ; lpNumberOfBytesRead
+        NULL                            ; lpOverlapped
+    
+    ; Check if read was successful
+    .IF eax == 0
+        INVOKE printString, ADDR errorMsg
+        call Wait_Msg
+        jmp listAccountFileExit
+    .ENDIF
+    
+    ; Add null terminator to buffer
+    mov edi, OFFSET readBuffer
+    add edi, bytesRead
+    mov BYTE PTR [edi], 0
+    
+    ; Skip the header line
+    mov esi, OFFSET readBuffer
+    
+listSkipHeaderLoop:
+    mov al, [esi]
+    cmp al, 0          ; End of buffer?
+    je listAccountsComplete ; File is empty or only has header
+    cmp al, 10         ; LF - new line?
+    je listFoundDataStart
+    cmp al, 13         ; CR?
+    je listSkipCR
+    inc esi
+    jmp listSkipHeaderLoop
+    
+listSkipCR:
+    inc esi            ; Skip CR
+    cmp BYTE PTR [esi], 10  ; Check for LF
+    jne listSkipHeaderLoop
+    inc esi            ; Skip LF
+    
+listFoundDataStart:
+    ; Initialize line number counter for display
+    mov lineNumber, 1
+    
+searchAllAccountsLoop:
+    ; Store the start of current line
+    mov currentLineStart, esi
+    
+    ; Skip account_number field (first field)
+    mov edi, OFFSET tempBuffer
+    call ParseCSVField
+    
+    ; Store account number for potential display
+    INVOKE Str_copy, ADDR tempBuffer, ADDR tempAccountNumber
+    
+    ; Parse customer_id field from current line (second field)
+    mov edi, OFFSET tempBuffer
+    call ParseCSVField
+
+    ; Compare with input customer_id
+    INVOKE Str_compare, ADDR tempBuffer, ADDR userCustomerID
+    
+    ; If match found
+    .IF ZERO?
+        ; Found an account with matching customer ID
+        
+        ; Store the account number in the matched array
+        mov ebx, accountCount        ; Get current count
+        cmp ebx, 10                  ; Check if we've reached max accounts
+        jae skipStoringAccount       ; Skip if array is full
+        
+        ; Get pointer to next slot in accountBuffer
+        lea edi, accountPtrs
+        mov edi, [edi + ebx*4]       ; Get pointer based on account count
+        
+        ; Store account number at this location
+        INVOKE Str_copy, ADDR tempAccountNumber, edi
+        
+skipStoringAccount:
+        inc accountCount
+        
+        ; Parse account_type field (third field)
+        mov edi, OFFSET tempBuffer
+        call ParseCSVField
+        
+        ; Display the account line
+        
+        ; Print line number
+        mov eax, lineNumber
+        call WriteDec
+        INVOKE printString, ADDR periodSpace
+        
+        ; Print account type
+        INVOKE printString, ADDR tempBuffer
+        INVOKE printString, ADDR spaceOpenParen
+        
+        ; Print account number
+        INVOKE printString, ADDR tempAccountNumber
+        INVOKE printString, ADDR closeParen
+
+        ; Check if the account is the current account
+        INVOKE Str_compare, ADDR tempAccountNumber, ADDR userAccountNumber
+
+        .IF ZERO?
+            INVOKE printString, ADDR currentAccPointer
+        .ENDIF
+        
+        call Crlf
+        
+        ; Increment line counter for next display
+        inc lineNumber
+    .ENDIF
+    
+    ; Skip to next line
+listSkipToNextLine:
+    mov al, [esi]
+    cmp al, 0      ; End of file?
+    je listAccountsComplete
+    cmp al, 10     ; LF?
+    je listNextLine
+    cmp al, 13     ; CR?
+    je listSkipToNextCR
+    inc esi
+    jmp listSkipToNextLine
+    
+listSkipToNextCR:
+    inc esi        ; Skip CR
+    cmp BYTE PTR [esi], 10  ; Check for LF
+    jne listSkipToNextLine
+    inc esi        ; Skip LF
+    jmp searchAllAccountsLoop
+    
+listNextLine:
+    inc esi        ; Skip LF
+    jmp searchAllAccountsLoop
+    
+listAccountsComplete:
+    ; If no accounts were found, display message
+    cmp accountCount, 0
+    jne listAccountFileExit
+    call Crlf
+    
+listAccountFileExit:
+    INVOKE CloseHandle, fileHandle
+    
+    ; Set return value (number of accounts found)
+    mov eax, accountCount
+    mov [esp+28], eax
+    
+    popad
+    ret
+listAccount ENDP
 
 ;--------------------------------------------------------------------------------
 ; parseUserAccount PROC
@@ -1264,9 +1490,10 @@ parseNextTransactionField:
     ; Parse transaction_detail field
     mov edi, OFFSET fieldBuffer
     call ParseCSVField
+    INVOKE Str_replace, ADDR fieldBuffer, ADDR periodChar, ADDR commaChar, ADDR tempBuffer, maxBufferSize
     mov edi, transaction
     add edi, OFFSET userTransaction.transaction_detail
-    INVOKE Str_copy, ADDR fieldBuffer, edi
+    INVOKE Str_copy, ADDR tempBuffer, edi
 
     ; Parse date field
     mov edi, OFFSET fieldBuffer

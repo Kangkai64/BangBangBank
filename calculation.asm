@@ -1,4 +1,6 @@
+
 INCLUDE BangBangBank.inc
+
 .data
 ; Totals for tracking
 totalCredit   BYTE 32 DUP('0'), 0  ; Buffer for storing credit total as string
@@ -16,6 +18,7 @@ debitMsg      BYTE "Total Debit: RM", 0
 balanceMsg      BYTE "Average Balance: RM", 0
 incremental     BYTE '1', 0
 leftPad         BYTE 5 DUP(32), 0      ; Left margin padding
+
 .code
 ;----------------------------------------------------------------------
 ; This module reset all the global variables

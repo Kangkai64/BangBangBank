@@ -13,6 +13,9 @@ INCLUDE BangBangBank.inc
 .data
 promptForTransactionDetailMsg BYTE "Enter recipient details (Press ENTER to use default): ", 0
 inputBuffer BYTE 255 DUP(?)
+replaceBuffer BYTE 255 DUP(?)
+commaChar BYTE ",", 0
+periodChar BYTE ".", 0
 
 .code
 promptForTransactionDetail PROC,
@@ -41,7 +44,8 @@ promptForTransactionDetail PROC,
     .ENDIF
 
     ; Copy custom message
-    INVOKE Str_copy, ADDR inputBuffer, inputTransactionDetailAddress
+    INVOKE Str_replace, ADDR inputBuffer, ADDR commaChar, ADDR periodChar, ADDR replaceBuffer, maxBufferSize
+    INVOKE Str_copy, ADDR replaceBuffer, inputTransactionDetailAddress
     CLC ; Use custom message
 
 done:
