@@ -155,6 +155,12 @@ print_all:
     add esi, OFFSET userAccount.currency
     INVOKE printString, esi
     call Crlf
+
+    ; Print interest_apply_date
+    mov esi, account
+    add esi, OFFSET userAccount.interest_apply_date
+    INVOKE printString, esi
+    call Crlf
     
     ; Print beneficiaries
     INVOKE printString, ADDR beneficiariesLabel

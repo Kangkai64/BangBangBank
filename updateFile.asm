@@ -49,7 +49,7 @@ spaceChar               BYTE " ", 0
 
 ; CSV Headers - used when creating new files
 headerCredentialLine    BYTE "username,hashed_password,hashed_PIN,customer_id,encryption_key,loginAttempt,firstLoginAttemptTimestamp", NEWLINE, 0
-headerAccountLine       BYTE "account_number,customer_id,full_name,phone_number,email,account_balance,opening_date,transaction_limit,branch_name,branch_address,account_type,currency,beneficiaries", NEWLINE, 0
+headerAccountLine       BYTE "account_number,customer_id,full_name,phone_number,email,account_balance,opening_date,transaction_limit,branch_name,branch_address,account_type,currency,interest_apply_date,beneficiaries", NEWLINE, 0
 headerTransactionLine   BYTE "transaction_id,customer_id,sender_account_number,transaction_type,recipient_id,recipient_account_number,amount,balance,transaction_detail,date,time", NEWLINE, 0
 
 ; System time structure for timestamps
@@ -455,6 +455,15 @@ formatAccountRecord PROC USES eax edx
     ; Add currency
     mov edx, formatPtr
     add edx, OFFSET userAccount.currency
+    mov eax, edx
+    mov edx, OFFSET outputBuffer
+    INVOKE Str_cat, eax, edx
+    
+    call addComma
+
+    ; Add interest apply date
+    mov edx, formatPtr
+    add edx, OFFSET userAccount.interest_apply_date
     mov eax, edx
     mov edx, OFFSET outputBuffer
     INVOKE Str_cat, eax, edx

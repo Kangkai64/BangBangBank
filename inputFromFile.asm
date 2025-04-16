@@ -82,7 +82,7 @@ InterestStr           BYTE "Interest", 0
 
 ; CSV Headers
 headerCredentialLine  BYTE "username,hashed_password,hashed_PIN,customer_id,encryption_key,loginAttempt,firstLoginAttemptTimestamp", NEWLINE, 0
-headerAccountLine     BYTE "account_number,customer_id,full_name,phone_number,email,account_balance,opening_date,transaction_limit,branch_name,branch_address,account_type,currency,beneficiaries", NEWLINE, 0
+headerAccountLine     BYTE "account_number,customer_id,full_name,phone_number,email,account_balance,opening_date,transaction_limit,branch_name,branch_address,account_type,currency,interest_apply_date,beneficiaries", NEWLINE, 0
 headerTransactionLine BYTE "transaction_id,customer_id,sender_account_number,transaction_type,recipient_id,recipient_account_number,amount,balance,transaction_detail,date,time", NEWLINE, 0
 
 ; System time structure for timestamps
@@ -924,6 +924,13 @@ parseNextAccountField:
     call ParseCSVField
     mov edi, account
     add edi, OFFSET userAccount.currency
+    INVOKE Str_copy, ADDR fieldBuffer, edi
+
+    ; Parse interest_apply_date field
+    mov edi, OFFSET fieldBuffer
+    call ParseCSVField
+    mov edi, account
+    add edi, OFFSET userAccount.interest_apply_date
     INVOKE Str_copy, ADDR fieldBuffer, edi
     
     ; Parse beneficiaries field

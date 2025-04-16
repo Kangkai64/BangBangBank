@@ -34,6 +34,7 @@ userAccount STRUCT
     branch_address    BYTE 128 DUP(?)
     account_type      BYTE 32 DUP(?)
     currency          BYTE 16 DUP(?)
+    interest_apply_date BYTE 32 DUP(?)
     beneficiaries     BYTE 255 DUP(?)
 userAccount ENDS
 

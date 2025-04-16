@@ -1,7 +1,7 @@
-account_number,customer_id,full_name,phone_number,email,account_balance,opening_date,transaction_limit,branch_name,branch_address,account_type,currency,beneficiaries
-235251356177,C001,Bobby,012-555-1234,jdoe@gmail.com,387.11,15/01/2025,7000.00,Main Branch,123 Main St,Current,RM,[Chen Wei. Sarah Jones]
-123456781234,C001,Bobby,012-555-1234,jdoe@gmail.com,9912.76,15/01/2025,5000.00,Main Branch,123 Main St,Savings,RM,[Chen Wei. Sarah Jones]
-234567891234,C002,Alice Smith,013-535-5678,asmith@gmail.com,2500.00,20/02/2025,3000.00,East Branch,456 East Rd,Checking,RM,[Bob White]
-765498764321,C003,Bob White,016-354-8765,bwhite@gmail.com,3600.50,05/03/2025,7000.00,West Branch,789 West Ave,Savings,RM,[Alice Smith]
-345678912345,C004,Chen Wei,017-654-3210,cwei@gmail.com,4750.25,12/03/2025,6500.00,North Branch,321 North Blvd,Checking,RM,[Bobby. Sarah Jones]
-456789123456,C005,Sarah Jones,019-765-4321,sjones@gmail.com,980.50,4/06/2024,250.00,South Branch,654 South St,Savings,RM,[Chen Wei. Bobby]
+account_number,customer_id,full_name,phone_number,email,account_balance,opening_date,transaction_limit,branch_name,branch_address,account_type,currency,interest_apply_date,beneficiaries
+235251356177,C001,Bobby,012-555-1234,jdoe@gmail.com,304.72,15/01/2025,7000.00,Main Branch,123 Main St,Current,RM,17/04/2025,[Chen Wei. Sarah Jones]
+123456781234,C001,Bobby,012-555-1234,jdoe@gmail.com,9912.76,15/01/2025,5000.00,Main Branch,123 Main St,Savings,RM,15/01/2025,[Chen Wei. Sarah Jones]
+234567891234,C002,Alice Smith,013-535-5678,asmith@gmail.com,2500.00,20/02/2025,3000.00,East Branch,456 East Rd,Checking,RM,20/02/2025,[Bob White]
+765498764321,C003,Bob White,016-354-8765,bwhite@gmail.com,3600.50,05/03/2025,7000.00,West Branch,789 West Ave,Savings,RM,05/03/2025,[Alice Smith]
+345678912345,C004,Chen Wei,017-654-3210,cwei@gmail.com,4750.25,12/03/2025,6500.00,North Branch,321 North Blvd,Checking,RM,12/03/2025,[Bobby. Sarah Jones]
+456789123456,C005,Sarah Jones,019-765-4321,sjones@gmail.com,980.50,04/06/2024,250.00,South Branch,654 South St,Savings,RM,04/06/2024,[Chen Wei. Bobby]

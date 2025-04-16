@@ -30,6 +30,7 @@ interestTransMsg    BYTE "Interest from BangBangBank", 0
 newBalanceMsg       BYTE "New Balance     : RM ", 0
 interestAmountMsg   BYTE "Interest Amount : RM ", 0
 tempInterest        DWORD ?
+tempBeneficiaries   BYTE 255 DUP(?)
 newBalance          DWORD ?
 decimalPoint BYTE ".", 0
 leadingZero BYTE "0", 0
@@ -45,7 +46,7 @@ transactionFileName    BYTE "Users\transactionLog.txt", 0
 .code
 
 ;--------------------------------------------------
-; This module is to get opening date
+; This module is to get interest apply date
 ;--------------------------------------------------
 
 parseOpeningDate PROC,
@@ -53,7 +54,7 @@ parseOpeningDate PROC,
     pushad                          ; Save all registers
     
     mov esi, account
-    add esi, OFFSET userAccount.opening_date  ; Load address of the date string
+    add esi, OFFSET userAccount.interest_apply_date  ; Load address of the date string
     
     ; Parse day (positions 0-1)
     xor eax, eax                    ; Clear EAX
@@ -197,6 +198,7 @@ checkInterest PROC,
     ; Get current time and format it in DD/MM/YYYY format
 	INVOKE GetLocalTime, ADDR currentTime
 	INVOKE formatSystemTime, ADDR currentTime, ADDR timeOutputBuffer
+    
 
 	; Copy the date part of the time stamp
 	lea esi, timeOutputBuffer
@@ -212,7 +214,7 @@ checkInterest PROC,
 
 	; Add null terminator
 	mov BYTE PTR [edi], 0
-    
+
     ; Get user opening date
     mov esi, account
     add esi, OFFSET userAccount.opening_date
@@ -343,11 +345,16 @@ no_leading_zero:
     ; Display interest applied message
     call Crlf
     INVOKE printString, ADDR interestAppliedMsg
-    
-    ; Store new balance in account structure
+
+    ; Store new interest apply date in account structure
     mov esi, account
     add esi, OFFSET userAccount.account_balance
     INVOKE Str_copy, ADDR balanceStr, esi
+
+    ; Update interest_apply_date
+    mov esi, account
+    add esi, userAccount.interest_apply_date
+    INVOKE Str_copy, ADDR timeDate, esi
 
     ; Update the user account file with new balance
     INVOKE updateUserAccountFile, account
