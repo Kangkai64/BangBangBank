@@ -1,4 +1,6 @@
+
 INCLUDE BangBangBank.inc
+
 .data
 ; Totals for tracking
 totalCredit   BYTE 32 DUP('0'), 0  ; Buffer for storing credit total as string
@@ -22,6 +24,7 @@ expensesMsg      BYTE "Average Expenses: RM ", 0
 incremental     BYTE '1', 0
 emptyOutput     BYTE ' -',0
 leftPad         BYTE 5 DUP(32), 0      ; Left margin padding
+
 .code
 ;----------------------------------------------------------------------
 ; This module reset all the global variables

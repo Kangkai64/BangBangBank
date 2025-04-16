@@ -11,7 +11,7 @@ INCLUDE BangBangBank.inc
 .data
 loginDesign BYTE "Bang Bang Bank Login", NEWLINE,
             "==============================", NEWLINE,
-            "User Login", NEWLINE,
+            "User Login (Enter 9 to exit)", NEWLINE,
             "==============================", NEWLINE, 0
 promptPasswordMsg BYTE "Please enter your password: ", 0
 emptyUsernameMsg  BYTE NEWLINE, "Username and password cannot be empty.", 0
@@ -23,6 +23,7 @@ attemptsRemaining BYTE "  attempts remaining.", NEWLINE, 0
 
 inputUsername BYTE 255 DUP(?)
 inputPassword BYTE 255 DUP(?)
+exitCode	  BYTE "9", 0
 currentTime SYSTEMTIME <>
 user userCredential <>
 
@@ -35,11 +36,22 @@ loginPrompt:
     
     ; Read username and password
     INVOKE promptForUsername, ADDR inputUsername
+
+    ; Check if user wants to exit or not
+	INVOKE Str_compare, ADDR inputUsername, ADDR exitCode
+    STC ; Don't exit the program
+	je loginExit
+
     INVOKE promptForPassword, ADDR inputPassword, ADDR promptPasswordMsg
+
+    ; Check if user wants to exit or not
+    INVOKE Str_compare, ADDR inputPassword, ADDR exitCode
+    STC ; Don't exit the program
+	je loginExit
 
     ; Check if username is empty
     INVOKE Str_length, ADDR inputUsername
-    mov eax, ebx
+    mov ebx, eax
 
     ; Check if password is empty
     INVOKE Str_length, ADDR inputPassword
@@ -164,7 +176,7 @@ loginSuccess:
     customerMenu:
         INVOKE displayCustomerMenu, ADDR user
         .IF CARRY?
-            call Clrscr
+            call clearConsole
         .ELSE
             call Wait_Msg
             STC ; Don't exit the prgram
