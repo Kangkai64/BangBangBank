@@ -1888,12 +1888,6 @@ perform_division:
     ; Convert to string
     mov edi, result
     
-    ; Add sign if negative
-    .IF isNegative == 1
-        mov BYTE PTR [edi], '-'
-        inc edi
-    .ENDIF
-    
     ; Convert integer to string
     mov eax, resultVal
     call IntToString

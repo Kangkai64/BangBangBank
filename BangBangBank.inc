@@ -358,6 +358,9 @@ calculateTotalCredit PROTO,
 calculateTotalDebit PROTO, 
     transaction: PTR userTransaction
 
+calculateTotalInterest PROTO, 
+    transaction: PTR userTransaction
+
 calculateAverageBalance PROTO, 
     transaction: PTR userTransaction
 

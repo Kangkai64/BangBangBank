@@ -72,6 +72,7 @@ spaceChar             BYTE " ", 0
 ; Transaction type strings
 DepositStr            BYTE "Deposit", 0
 TransferStr           BYTE "Transfer", 0
+InterestStr           BYTE "Interest", 0
 
 ; CSV Headers
 headerCredentialLine  BYTE "username,hashed_password,hashed_PIN,customer_id,encryption_key,loginAttempt,firstLoginAttemptTimestamp", NEWLINE, 0
@@ -850,6 +851,11 @@ searchTransactionLoop:
                 INVOKE Str_compare, edi, ADDR DepositStr
                 .IF ZERO?
                     INVOKE calculateTotalDebit, transaction
+                .ELSE
+                    INVOKE Str_compare, edi, ADDR InterestStr
+                    .IF ZERO?
+                        INVOKE calculateTotalInterest, transaction
+                    .ENDIF
                 .ENDIF
             .ENDIF
             
@@ -921,6 +927,11 @@ searchTransactionLoop:
                 INVOKE Str_compare, edi, ADDR DepositStr
                 .IF ZERO?
                     INVOKE calculateTotalDebit, transaction
+                    .ELSE
+                    INVOKE Str_compare, edi, ADDR InterestStr
+                    .IF ZERO?
+                        INVOKE calculateTotalInterest, transaction
+                    .ENDIF
                 .ENDIF
             .ENDIF
             
