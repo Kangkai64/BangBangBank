@@ -37,6 +37,13 @@ resetData PROC
     push ecx
     push edi
     
+    ; Reset totalInterest (fill with '0')
+    mov edi, OFFSET totalInterest
+    mov al, '0'
+    mov ecx, 32
+    rep stosb
+    mov BYTE PTR [edi], 0    ; Null-terminate
+
     ; Reset totalCredit (fill with '0')
     mov edi, OFFSET totalCredit
     mov al, '0'
@@ -67,6 +74,13 @@ resetData PROC
     
     ; Reset averageBalance
     mov edi, OFFSET averageBalance
+    mov al, '0'
+    mov ecx, 32
+    rep stosb
+    mov BYTE PTR [edi], 0    ; Null-terminate
+
+    ; Reset averageExpenses
+    mov edi, OFFSET averageExpenses
     mov al, '0'
     mov ecx, 32
     rep stosb
