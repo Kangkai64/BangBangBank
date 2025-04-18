@@ -29,6 +29,7 @@
     <MASM Include="encrypt.asm" />
     <MASM Include="promptForTransactionDetail.asm" />
     <MASM Include="processDeposit.asm" />
+    <MASM Include="promptForTransactionMethod.asm" />
     <MASM Include="updateFile.asm" />
     <MASM Include="validatePasswordComplexity.asm" />
     <MASM Include="generateOTP.asm" />

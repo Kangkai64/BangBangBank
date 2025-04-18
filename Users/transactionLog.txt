@@ -28,3 +28,4 @@ T0026,C001,,Deposit,,,+100.00,387.11,Duit Kopi. 2.0 :],15/04/2025,17:44:16
 T0027,C001,,Deposit,,,+1000.00,9912.76,Deposit into account,15/04/2025,20:35:18
 T0028,C001,235251356177,Interest,,,+8.62,295.84,Interest from BangBangBank,17/04/2025,00:57:01
 T0029,C001,235251356177,Interest,,,+8.88,304.72,Interest from BangBangBank,17/04/2025,00:59:33
+T0030,C001,,Deposit,,,+4000.00,4304.72,Deposit into account,18/04/2025,09:08:54

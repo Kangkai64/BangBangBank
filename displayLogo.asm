@@ -19,14 +19,14 @@ logoDesign BYTE NEWLINE, NEWLINE,
 
 .code
 displayLogo PROC
-    
+
     pushad
 
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, LOGO
-	INVOKE printString, ADDR logoDesign
+    INVOKE printString, ADDR logoDesign
     INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
 
     popad
-	ret
+    ret
 displayLogo ENDP
 END

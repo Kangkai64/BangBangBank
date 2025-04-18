@@ -13,7 +13,8 @@ TITLE  BangBangBank(.asm)
 INCLUDE BangBangBank.inc
 
 .data
-titleStr BYTE "Bang Bang Bank Application Program", 0
+titleStr	BYTE "Bang Bang Bank Application Program", 0
+exitMessage BYTE NEWLINE, "Thank you for using Bang Bang Bank!", NEWLINE, 0
 
 .code
 main PROC
@@ -27,6 +28,7 @@ main PROC
 		jc mainMenu
 
 	call clearConsole
+	INVOKE printString, ADDR exitMessage
 	INVOKE displayLogo
 	call Crlf
 	exit

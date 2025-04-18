@@ -55,9 +55,9 @@ userTransaction STRUCT
     time                        BYTE 32 DUP(?)
 userTransaction ENDS
 
-;-------------------------------------------
-; File Function Prototype from kernel32.inc
-;-------------------------------------------
+;---------------------------------------
+; Function Prototype from kernel32.inc
+;---------------------------------------
 CreateDirectoryA PROTO STDCALL :DWORD,:DWORD
 IFNDEF __UNICODE__
   CreateDirectory equ <CreateDirectoryA>
@@ -78,8 +78,8 @@ WinExec PROTO, lpCmdLine:PTR BYTE, uCmdShow:DWORD
 ;-----------------------------
 ; Symbols from windows.inc
 ;-----------------------------
-ERROR_ALREADY_EXISTS equ 183
-SW_HIDE              equ 0
+ERROR_ALREADY_EXISTS EQU 183
+SW_HIDE              EQU 0
 
 ;-----------------------------
 ; Helper Function Prototype
@@ -346,8 +346,12 @@ generateTransactionID PROTO,
 verifyOTP PROTO,
     generatedOTP: PTR BYTE 
 
+promptForTransactionMethod PROTO, 
+	transactionChoice: PTR BYTE
+
 processDeposit PROTO,
-    account: PTR userAccount
+    account: PTR userAccount,
+    user: PTR userCredential
 
 switchAccount PROTO,
     account: PTR userAccount,

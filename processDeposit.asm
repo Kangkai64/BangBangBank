@@ -12,8 +12,7 @@ dateHeader BYTE "Date & Time: ", 0
 currentTime SYSTEMTIME <>
 timeOutputBuffer BYTE 32 DUP(?)
 timeDate BYTE 16 DUP(?)
-transactionPageTitle BYTE "Bang Bang Bank Transaction", NEWLINE,
-                          "==============================", NEWLINE,0
+transactionMethodChoice BYTE ?
 transactionDetailTitle BYTE "Transaction details", NEWLINE,
                             "==============================", NEWLINE,0
 amount BYTE "Amount : RM ",0
@@ -26,13 +25,15 @@ transactionDetailMsg BYTE "Transaction Detail: ", 0
 transactionSuccessful BYTE "Transaction Successful!",0
 transactionCancel BYTE "Transaction Cancelled!",0
 invalidOption BYTE "Invalid option. Please try again.", 0
-transactionVerifiedMsg BYTE "OTP verification successful! Transaction completed.", NEWLINE, 0
-transactionFailedMsg BYTE "OTP verification failed! Transaction cancelled.", NEWLINE, 0
-resendOTPMsg BYTE "OTP will resend to the same file.", 0
 promptTransactionAmtMsg BYTE "Enter deposit amount (RM): ", 0
 inputDepositDetail BYTE 255 DUP(?)
 defaultDepositMessage BYTE "Deposit into account", 0
 inputDepositAmount BYTE 255 DUP(?)
+promptPIN                   BYTE "Enter your PIN : ", 0
+inputPIN                    BYTE 255 DUP(?)
+userVerifiedMsg             BYTE NEWLINE, "PIN verification successful! Deposit completed.", NEWLINE, 0
+depositFailedMessage        BYTE "PIN verification failed! Deposit is cancelled.", NEWLINE, 0
+emptyPINMsg                 BYTE "Please enter your PIN number.", NEWLINE, 0
 formattedDepositAmount BYTE 32 DUP(0)
 newTransactionId BYTE 255 DUP(?)
 formattedAccountBalance BYTE 32 DUP(0)
@@ -42,7 +43,8 @@ transferTypeStr BYTE "Deposit", 0
 
 .code
 processDeposit PROC,
-    account: PTR userAccount
+    account: PTR userAccount,
+    user: PTR userCredential
 
     call Clrscr
     ; Get current time and format it in DD/MM/YYYY HH:MM:SS format
@@ -62,8 +64,8 @@ processDeposit PROC,
     mov BYTE PTR [edi], 0
 
     call Clrscr
-    ;Display transaction page
-    INVOKE printString, ADDR transactionPageTitle
+    ;Prompt for transaction method
+    INVOKE promptForTransactionMethod, ADDR transactionMethodChoice
 
     ;prompt transaction amount
     INVOKE promptForTransactionAmount, OFFSET inputDepositAmount, account
@@ -136,24 +138,38 @@ confirmTransaction:
         call Wait_Msg
         jmp confirmTransaction
     .ELSEIF al == 1
-        jmp validateOTP
+        jmp validatePIN
     .ELSEIF al == 2
         INVOKE printString, ADDR transactionCancel
         call Wait_Msg
         jmp done
     .ENDIF
 
-validateOTP:
-    Call Clrscr
-    INVOKE generateOTP, account    ; This puts OTP in eax
-    push eax                       ; Save the OTP
+validatePIN:
+    mov esi, [user]
+    add esi, OFFSET userCredential.hashed_pin
+    mov ebx, esi
+    mov esi, [user]
+    add esi, OFFSET userCredential.encryption_key
 
-    ; Verify OTP with timeout and retry limit
-    INVOKE verifyOTP, eax
+    ; Prompt for user's PIN
+	INVOKE promptForPassword, ADDR inputPIN, ADDR promptPIN
+
+    ; Check if PIN is empty
+    INVOKE Str_length, ADDR inputPIN
+    .IF eax == 0
+        INVOKE printString, ADDR emptyPINMsg
+        call Wait_Msg
+        jmp confirmTransaction
+    .ENDIF
+
+    INVOKE validatePassword, ADDR inputPIN, ebx, esi                      
         
-    .IF eax == 1   ; If OTP verification was successful
-        INVOKE printString, ADDR transactionVerifiedMsg
-        INVOKE printString, ADDR transactionSuccessful
+    .IF CARRY? ; Invalid PIN
+        INVOKE printString, ADDR depositFailedMessage
+        call Wait_Msg
+    .ELSE
+        INVOKE printString, ADDR userVerifiedMsg
         call Wait_Msg
 
         ; Get the current account balance and format it (remove decimal point)
@@ -208,16 +224,7 @@ validateOTP:
 
         ; Insert the transaction log
         INVOKE insertTransaction, ADDR transactionRecord
-
-    .ELSEIF eax == 2 ; IF OTP was expired, resend otp
-        INVOKE printString, ADDR resendOTPMsg
-        call Wait_Msg
-        jmp validateOTP
-    .ELSE              ; If OTP verification failed
-        INVOKE printString, ADDR transactionFailedMsg
-        call Wait_Msg
     .ENDIF
-    jmp done
 
 done:
     STC ; Don't logout the user

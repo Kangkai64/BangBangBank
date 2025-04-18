@@ -15,11 +15,8 @@ FILE_TYPE_TRANSACTIONS  EQU 3
 
 ; File paths
 credentialFileName     BYTE "Users\userCredential.txt", 0
-tempCredentialFile     BYTE "Users\userCredential.tmp", 0
 accountFileName        BYTE "Users\userAccount.txt", 0
-tempAccountFile        BYTE "Users\userAccount.tmp", 0
 transactionFileName    BYTE "Users\transactionLog.txt", 0
-tempTransactionFile    BYTE "Users\transactionLog.tmp", 0
 directoryPath          BYTE "Users\", 0
 
 ; File handling variables
@@ -758,8 +755,16 @@ searchAllAccountsLoop:
 skipStoringAccount:
         inc accountCount
         
-        ; Parse account_type field (third field)
+        ; Parse account_type field (eleventh field)
         mov edi, OFFSET tempBuffer
+        call ParseCSVField
+        call ParseCSVField
+        call ParseCSVField
+        call ParseCSVField
+        call ParseCSVField
+        call ParseCSVField
+        call ParseCSVField
+        call ParseCSVField
         call ParseCSVField
         
         ; Display the account line

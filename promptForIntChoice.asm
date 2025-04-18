@@ -13,7 +13,6 @@ INCLUDE BangBangBank.inc
 promptMsg BYTE "Enter your choice: ", 0
 invalidChoiceMsg BYTE "Invalid option. Please try again", NEWLINE, 0
 wrongTypeMessage BYTE "Please enter a number within the range", NEWLINE, 0
-exitMessage BYTE "Thank you for using Bang Bang Bank!", 0
 
 .code
 promptForIntChoice PROC USES ebx ecx edx,
@@ -30,7 +29,6 @@ promptForIntChoice PROC USES ebx ecx edx,
     
     ; Check if it's 9 for special exit case
     .IF al == '9'
-        INVOKE printString, OFFSET exitMessage
         CLC           ; Clear carry flag to indicate success
         jmp done      ; Jump to the end to return
     .ENDIF

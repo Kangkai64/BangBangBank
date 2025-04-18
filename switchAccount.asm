@@ -19,10 +19,11 @@ promptPIN                   BYTE "Enter your PIN : ", 0
 userVerifiedMsg             BYTE NEWLINE, "PIN verification successful! Transaction completed.", NEWLINE, 0
 switchAccountSuccessMessage BYTE "Account switched successfully.", NEWLINE, 0
 switchAccountFailedMessage  BYTE "PIN verification failed! Account switching is cancelled.", NEWLINE, 0
+emptyPINMsg                 BYTE "Please enter your PIN number.", NEWLINE, 0
 
 accountCount                DWORD 0
 accountChoice               DWORD 0
-exitCode                    BYTE "0",0
+exitCode                    BYTE "9",0
 inputPIN                    BYTE 255 DUP(?)
 accountBuffer               BYTE 100 DUP(0)  ; Buffer to store up to 10 account numbers (20 chars each)
 accountPtrs                 DWORD 5 DUP(0)  ; Array of pointers to account numbers
@@ -31,12 +32,13 @@ accountPtrs                 DWORD 5 DUP(0)  ; Array of pointers to account numbe
 switchAccount PROC,
     account: PTR userAccount,
     user: PTR userCredential
-    
+   
+start:
     call clearConsole
     INVOKE printString, ADDR switchAccountHeader
     
     ; Initialize the pointers array
-    mov ecx, 5                      ; Max 10 accounts
+    mov ecx, 5                      ; Max 5 accounts
     mov edi, OFFSET accountBuffer
     mov ebx, OFFSET accountPtrs
 
@@ -54,7 +56,7 @@ initPtrArrayLoop:
         call Wait_Msg
         jmp switchAccountExit
     .ELSE
-        movzx eax, al
+        ; movzx eax, al
         INVOKE promptForIntChoice, 1, al
         .IF CARRY? || al == exitCode
             jmp switchAccountExit
@@ -71,6 +73,15 @@ initPtrArrayLoop:
 
                 ; Prompt for user's PIN
 	            INVOKE promptForPassword, ADDR inputPIN, ADDR promptPIN
+
+                ; Check if PIN is empty
+                INVOKE Str_length, ADDR inputPIN
+                .IF eax == 0
+                    INVOKE printString, ADDR emptyPINMsg
+                    call Wait_Msg
+                    jmp start
+                .ENDIF
+
                 INVOKE validatePassword, ADDR inputPIN, ebx, esi
         
                 .IF CARRY? ; Invalid PIN

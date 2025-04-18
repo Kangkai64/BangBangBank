@@ -98,7 +98,7 @@ displayCustomerMenu PROC,
 	.ELSEIF al == 1
 		INVOKE processTransaction, ADDR account
 	.ELSEIF al == 2
-		INVOKE processDeposit, ADDR account
+		INVOKE processDeposit, ADDR account, user
 	.ELSEIF al == 3
         INVOKE printMonthlyStatement, ADDR account
 	.ELSEIF al == 4
@@ -107,7 +107,13 @@ displayCustomerMenu PROC,
 		INVOKE switchAccount, ADDR account, user
 	.ENDIF
 
+	jc start
+
 	done:
-		ret 
+		; Reset the flag values
+		mov eax, 0
+		mov inputAccountFlag, eax
+		mov interestFlag, eax
+		ret  
 displayCustomerMenu ENDP
 END
