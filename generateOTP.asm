@@ -14,8 +14,8 @@ otpFilePath           BYTE 256 DUP(0)  ; Increased buffer size for safety
 ; OTP variables
 otpBuffer             BYTE 16 DUP(0)   ; Initialize with zeros for safety
 otpPrefix             BYTE "OTP-", 0
-otpMessage            BYTE "Your OTP is generated in the Bang Bang Bank/OTP/T001.txt.", NEWLINE, 
-                            "Please do not share it with others. Expiring in 60 seconds.", 0
+otpMessage1           BYTE "Your OTP is generated in the Bang Bang Bank\", 0
+otpMessage2           BYTE ".", NEWLINE, "Please do not share it with others. Expiring in 60 seconds.", 0
 createDirError        BYTE "Error creating OTP directory", 0
 createFileError       BYTE "Error creating OTP file", 0
 bytesWritten          DWORD ?
@@ -159,7 +159,9 @@ otpFileOpen:
     INVOKE CloseHandle, fileHandle
 
     ; Print success message
-    INVOKE printString, ADDR otpMessage
+    INVOKE printString, ADDR otpMessage1
+    INVOKE printString, ADDR otpFilePath
+    INVOKE printString, ADDR otpMessage2
     call Crlf
     call Crlf
 

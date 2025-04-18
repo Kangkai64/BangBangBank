@@ -16,6 +16,7 @@ transactionPageTitle BYTE "Bang Bang Bank Transaction", NEWLINE,
                           "==============================", NEWLINE,0
 transactionDetailTitle BYTE "Transaction details", NEWLINE,
                             "==============================", NEWLINE,0
+recipientAccEmptyMsg BYTE "Recipient account cannot be empty.", NEWLINE,0
 recipientAccNotFound BYTE "Recipient account not found...", NEWLINE,0
 selfAccountErrorMsg BYTE "You cannot enter your own account number as recipient.", NEWLINE, 0
 recipientAccount userAccount <>
@@ -49,6 +50,7 @@ extraFeeMsg BYTE "Extra Fee: RM 1.00 (exceeded daily limit)", NEWLINE, 0
 processTransaction PROC,
     account: PTR userAccount
 
+start:
     call Clrscr
     ; Get current time and format it in DD/MM/YYYY HH:MM:SS format
     INVOKE GetLocalTime, ADDR currentTime
@@ -72,6 +74,25 @@ processTransaction PROC,
 
     ; prompt for recipient account number
     INVOKE promptForRecipientAccNo, ADDR inputRecipientAccNo
+
+    ; Check if recipient account number is empty
+    INVOKE Str_length, ADDR inputRecipientAccNo
+    .IF EAX == 0
+        INVOKE printString, ADDR recipientAccEmptyMsg
+        call Wait_Msg
+        jmp start
+    .ENDIF
+
+    ; Check if recipient account number is self account
+    mov esi, account
+    add esi, OFFSET userAccount.account_number
+
+    INVOKE Str_compare, ADDR inputRecipientAccNo, esi
+    .IF ZERO?
+        INVOKE printString, ADDR selfAccountErrorMsg
+        call Wait_Msg
+        jmp start
+    .ENDIF
 
     ;validate recipient account
     INVOKE validateRecipientAcc, ADDR inputRecipientAccNo

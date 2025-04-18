@@ -11,8 +11,8 @@ INCLUDE BangBangBank.inc
 
 .data
 switchAccountHeader         BYTE NEWLINE, 
-                                 "Available Account", NEWLINE, 
-                                 "==============================", NEWLINE, 0
+                                 "Available Account (Enter 9 to return)", NEWLINE, 
+                                 "======================================", NEWLINE, 0
 noOtherAccountMessage       BYTE NEWLINE, "You didn't have another account. Kindly register a new account", NEWLINE,
                                  "at your nearest Bang Bang Bank Branch.", NEWLINE, 0
 promptPIN                   BYTE "Enter your PIN : ", 0

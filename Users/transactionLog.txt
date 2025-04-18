@@ -29,3 +29,8 @@ T0027,C001,,Deposit,,,+1000.00,9912.76,Deposit into account,15/04/2025,20:35:18
 T0028,C001,235251356177,Interest,,,+8.62,295.84,Interest from BangBangBank,17/04/2025,00:57:01
 T0029,C001,235251356177,Interest,,,+8.88,304.72,Interest from BangBangBank,17/04/2025,00:59:33
 T0030,C001,,Deposit,,,+4000.00,4304.72,Deposit into account,18/04/2025,09:08:54
+T0031,C002,234567891234,Transfer,C004,345678912345,-100.00,2400.00,Transfer sent to another account,18/04/2025,20:31:03
+T0032,C002,234567891234,Transfer,C004,345678912345,-100.00,2300.00,Transfer sent to another account,18/04/2025,20:37:06
+T0033,C001,235251356177,Transfer,C001,235251356177,-7000.00,304.72,Transfer sent to another account,18/04/2025,20:53:33
+T0034,C001,,Deposit,,,+100.00,4404.72,Deposit into account,18/04/2025,21:10:24
+T0035,C001,,Deposit,,,+1000.00,5404.72,Deposit into account,18/04/2025,21:10:36

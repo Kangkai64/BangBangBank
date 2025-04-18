@@ -34,7 +34,7 @@ inputAccountFlag DWORD 0
 displayCustomerMenu PROC,
 	user: PTR userCredential
 
-	start:
+start:
 	call clearConsole
 	; Get current time and format it in DD/MM/YYYY HH:MM:SS format
 	INVOKE GetLocalTime, ADDR currentTime
@@ -97,6 +97,9 @@ displayCustomerMenu PROC,
 		jmp start
 	.ELSEIF al == 1
 		INVOKE processTransaction, ADDR account
+		; Refresh account
+		mov eax, 1
+		mov inputAccountFlag, eax
 	.ELSEIF al == 2
 		INVOKE processDeposit, ADDR account, user
 	.ELSEIF al == 3

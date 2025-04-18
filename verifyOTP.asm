@@ -7,12 +7,9 @@ otpInvalidMsg BYTE "Invalid OTP! You have ", 0
 noAttemptsLeftMsg BYTE "Invalid OTP! No attempts left...", 0
 otpAttemptsLeftMsg BYTE " attempts left.", NEWLINE, 0
 otpExpiredMsg BYTE "OTP has expired! Transaction cancelled.", NEWLINE, 0
-;otpDebugMsg BYTE "Debug - Expected OTP: ", 0  ; Debug message
-;otpInputMsg BYTE "Debug - Your input: ", 0    ; Debug message
 otpInputBuffer BYTE 32 DUP(?)
 otpAttemptCount DWORD 3          ; User gets 3 attempts
 otpGeneratedTime DWORD ?         ; Store the time when OTP was generated
-otpExpirySeconds DWORD 60        ; OTP expires after 60 seconds
 otpTickCount DWORD ?             ; Current tick count for OTP timeout check
 otpTempBuffer BYTE 32 DUP(?)     ; Buffer to store a copy of the generated OTP
 

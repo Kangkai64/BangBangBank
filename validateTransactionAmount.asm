@@ -65,14 +65,14 @@ validateTransactionAmount PROC,
         
         ; Call procedure to get sum of all transactions today
         INVOKE inputTotalTransactionFromTransaction, ADDR senderTransaction, ADDR timeDate, ADDR dailyTotalTransactions
-        INVOKE printString, ADDR dailyTotalTransactions
         call Crlf
+
         ; Format the new transaction amount
         INVOKE removeDecimalPoint, inputTransactionAmountAddress, ADDR formattedTransAmount
         
         ; Add new transaction to today's total
         INVOKE decimalArithmetic, ADDR dailyTotalTransactions, ADDR formattedTransAmount, ADDR totalWithCurrentTransaction, '-'
-        INVOKE printString, ADDR totalWithCurrentTransaction
+
         call Crlf
         ; Compare total+new with limit
         INVOKE decimalArithmetic, ADDR transactionLimit, ADDR totalWithCurrentTransaction, ADDR tempBuffer, '+'
