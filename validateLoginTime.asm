@@ -12,6 +12,8 @@ INCLUDE BangBangBank.inc
 currentTime          SYSTEMTIME <>
 attemptHour         DWORD ?
 currentHour         DWORD ?
+attemptMinute       DWORD ?
+currentMinute       DWORD ?
 hourDiff            DWORD ?
 
 .code
@@ -41,6 +43,10 @@ validateLoginTime PROC,
     ; Get current hour
     movzx eax, currentTime.wHour
     mov currentHour, eax
+
+    ; Get current minute
+    movzx eax, currentTime.wMinute
+    mov currentMinute, eax
     
     ; Get hour from timestamp (DD/MM/YYYY HH:MM:SS format)
     lea esi, (userCredential PTR [edi]).firstLoginAttemptTimestamp
@@ -58,6 +64,17 @@ validateLoginTime PROC,
     sub bl, '0'       ; Convert from ASCII
     add eax, ebx      ; Add to get full hour value
     mov attemptHour, eax
+
+    ; Get MM part
+    xor eax, eax
+    mov al, [esi+3]   ; Get first digit
+    sub al, '0'       ; Convert from ASCII
+    mov ebx, 10
+    mul ebx           ; Multiply by 10
+    mov bl, [esi+4]   ; Get second digit
+    sub bl, '0'       ; Convert from ASCII
+    add eax, ebx      ; Add to get full hour value
+    mov attemptMinute, eax
     
     ; Calculate hours difference
     mov eax, currentHour
@@ -69,13 +86,24 @@ validateLoginTime PROC,
     add eax, 24  ; Add 24 hours if current < attempt
 hourDiffPositive:
     mov hourDiff, eax
+
+    ; Calculate minute difference
+    mov eax, currentMinute
+    sub eax, attemptMinute
+
+    cmp eax, 0
+    jge checkLockout
+    add eax, 24  ; Add 24 hours if current < attempt
     
-    ; Check if within 5 hour lockout period
-    cmp hourDiff, 5
-    .IF hourDiff >= 5
+checkLockout:
+    mov hourDiff, eax
+
+    ; Check if within 24 hour lockout period
+    cmp hourDiff, 24
+    .IF hourDiff >= 24
         INVOKE resetLoginAttempt, user
     .ENDIF
-    jge notLockedOut  ; If 5+ hours passed, not locked out
+    jge notLockedOut  ; If 24+ hours passed, not locked out
     
     ; User is locked out
     mov eax, 1

@@ -86,7 +86,7 @@ loginPrompt:
     ; Account is locked - display message
     INVOKE printString, OFFSET loginAttemptLimitReachedMsg
 
-    ; Parse timestamp to get original hour and add 5 hours for unlock time
+    ; Parse timestamp to get original hour and add 24 hours for unlock time
     lea esi, user.firstLoginAttemptTimestamp
 
     ; Perform precise timestamp increment

@@ -342,8 +342,8 @@ parseYear:
     add al, bl
     mov [esp+6], al     ; Store hour
     
-    ; Add 5 hours
-    add byte ptr [esp+6], 5
+    ; Add 24 hours
+    add byte ptr [esp+6], 24
     
     ; Check hour overflow
     cmp byte ptr [esp+6], 24

@@ -93,8 +93,8 @@ displayCustomerMenu PROC,
 	INVOKE printString, ADDR customerMenuChoice
 	INVOKE promptForIntChoice, 1, 5
 	
-	.IF CARRY? ; Return if the input is invalid
-		jmp done
+	.IF CARRY? ; Return to start if the input is invalid
+		jmp start
 	.ELSEIF al == 1
 		INVOKE processTransaction, ADDR account
 	.ELSEIF al == 2
