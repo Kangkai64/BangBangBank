@@ -97,9 +97,6 @@ start:
 		jmp start
 	.ELSEIF al == 1
 		INVOKE processTransaction, ADDR account
-		; Refresh account
-		mov eax, 1
-		mov inputAccountFlag, eax
 	.ELSEIF al == 2
 		INVOKE processDeposit, ADDR account, user
 	.ELSEIF al == 3
