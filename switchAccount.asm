@@ -16,7 +16,7 @@ switchAccountHeader         BYTE NEWLINE,
 noOtherAccountMessage       BYTE NEWLINE, "You didn't have another account. Kindly register a new account", NEWLINE,
                                  "at your nearest Bang Bang Bank Branch.", NEWLINE, 0
 promptPIN                   BYTE "Enter your PIN : ", 0
-userVerifiedMsg             BYTE NEWLINE, "PIN verification successful! Transaction completed.", NEWLINE, 0
+userVerifiedMsg             BYTE NEWLINE, "PIN verification successful!", NEWLINE, 0
 switchAccountSuccessMessage BYTE "Account switched successfully.", NEWLINE, 0
 switchAccountFailedMessage  BYTE "PIN verification failed! Account switching is cancelled.", NEWLINE, 0
 emptyPINMsg                 BYTE "Please enter your PIN number.", NEWLINE, 0
@@ -56,9 +56,11 @@ initPtrArrayLoop:
         call Wait_Msg
         jmp switchAccountExit
     .ELSE
-        ; movzx eax, al
+        movzx eax, al
         INVOKE promptForIntChoice, 1, al
-        .IF CARRY? || al == exitCode
+        .IF CARRY?
+            jmp start
+        .ELSEIF al == exitCode
             jmp switchAccountExit
         .ELSE
             movzx eax, al

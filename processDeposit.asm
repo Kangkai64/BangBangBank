@@ -34,6 +34,7 @@ inputPIN                    BYTE 255 DUP(?)
 userVerifiedMsg             BYTE NEWLINE, "PIN verification successful! Deposit completed.", NEWLINE, 0
 depositFailedMessage        BYTE "PIN verification failed! Deposit is cancelled.", NEWLINE, 0
 emptyPINMsg                 BYTE "Please enter your PIN number.", NEWLINE, 0
+exitCode		            BYTE "9", 0
 formattedDepositAmount BYTE 32 DUP(0)
 newTransactionId BYTE 255 DUP(?)
 formattedAccountBalance BYTE 32 DUP(0)
@@ -65,7 +66,13 @@ processDeposit PROC,
 
     call Clrscr
     ;Prompt for transaction method
-    INVOKE promptForTransactionMethod, ADDR transactionMethodChoice
+    INVOKE promptForTransactionMethod, ADDR transactionMethodChoice, ADDR timeDate
+
+    movzx eax, transactionMethodChoice
+
+    .IF al == exitCode
+        jmp done
+    .ENDIF
 
     ;prompt transaction amount
     INVOKE promptForTransactionAmount, OFFSET inputDepositAmount, account
@@ -134,8 +141,6 @@ confirmTransaction:
     INVOKE promptForIntChoice, 1, 2
     
     .IF CARRY? ; Return if the input is invalid
-        INVOKE printString, ADDR invalidOption
-        call Wait_Msg
         jmp confirmTransaction
     .ELSEIF al == 1
         jmp validatePIN

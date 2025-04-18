@@ -70,14 +70,23 @@ input_retry:
         mov BYTE PTR [edi], 0
     .ENDIF
     
-    ; Check if input amount is zero
+    ; Check if input amount is valid integer
     mov esi, inputTransactionAmountAddress
+    INVOKE Str_length, esi
+    mov ecx, eax
+
+validateInteger:
     mov al, [esi]
 
-    .IF al == '0'
+    .IF al < '0' || al > '9'
         INVOKE printString, ADDR invalidInputMsg
         jmp input_retry
     .ENDIF
+
+    inc esi
+
+    LOOP validateInteger
+    CLC ; LOOP will cause the Carry Flag!
     
 done:
     popad

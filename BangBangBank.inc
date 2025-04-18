@@ -347,7 +347,8 @@ verifyOTP PROTO,
     generatedOTP: PTR BYTE 
 
 promptForTransactionMethod PROTO, 
-	transactionChoice: PTR BYTE
+	transactionChoice: PTR BYTE,
+    timeDate: PTR BYTE
 
 processDeposit PROTO,
     account: PTR userAccount,

@@ -1109,8 +1109,6 @@ search_loop:
     .ENDIF
     
     ; Try to match substring at current position
-    mov edi, subString
-    mov ecx, subLen     ; Match length
     mov ebx, pos        ; Get current position
     mov edx, sourceStr
     add edx, ebx        ; Point to current position in source
@@ -1118,19 +1116,38 @@ search_loop:
     push esi
     push edi
     mov esi, edx        ; Source pointer at current position
+    mov edi, subString  ; Substring pointer
     
-    ; Compare strings
-    repe cmpsb
+    ; Manual character comparison loop
+    mov ecx, subLen     ; Initialize counter with substring length
+    mov eax, 1          ; Flag: 1 = strings match so far
     
-    pop edi
-    pop esi
+    compare_loop:
+        mov bl, byte ptr [esi]  ; Get current character from source
+        mov dl, byte ptr [edi]  ; Get current character from substring
+        
+        cmp bl, dl              ; Compare characters
+        jne match_failed        ; Jump if characters don't match
+        
+        inc esi                 ; Move to next character in source
+        inc edi                 ; Move to next character in substring
+        dec ecx                 ; Decrement counter
+        jnz compare_loop        ; Continue if not all characters compared
+        jmp match_found         ; All characters matched
     
-    ; If ECX is 0, then all characters matched
-    .IF ecx == 0
-        mov eax, pos    ; Return the position where substring was found
-        inc eax         ; Convert to 1-based index
-        jmp done
-    .ENDIF
+    match_failed:
+        mov eax, 0             ; Set match flag to 0 (not matched)
+    
+    match_found:
+        pop edi
+        pop esi
+        
+        ; If EAX is 1, then all characters matched
+        .IF eax == 1
+            mov eax, pos       ; Return the position where substring was found
+            inc eax            ; Convert to 1-based index
+            jmp done
+        .ENDIF
     
     ; Move to next position in source
     inc pos
@@ -1384,7 +1401,7 @@ Str_replace ENDP
 ; Last update: 7/4/2025
 ;------------------------------------------------------------------------
 .data
-    invalidDecimalMsg BYTE "Invalid decimal format. Please use format like 1000.56", NEWLINE, 0
+    invalidDecimalMsg BYTE "Invalid decimal format. Please use format like 9999.99", NEWLINE, 0
     tooManyDecimalsMsg BYTE "Please enter no more than 2 decimal places.", NEWLINE, 0
     tempInputBuffer BYTE 32 DUP(0)    ; Temporary buffer for formatting
     

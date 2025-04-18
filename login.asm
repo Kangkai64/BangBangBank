@@ -30,7 +30,6 @@ user userCredential <>
 .code
 login PROC
 
-loginPrompt:
     ; Display login design
     INVOKE printString, OFFSET loginDesign
     
@@ -59,7 +58,7 @@ loginPrompt:
         INVOKE printString, ADDR emptyUsernameMsg
         call Wait_Msg
         call Clrscr
-        jmp loginPrompt
+        jmp loginExit
     .ENDIF
     
     ; Copy input username to user structure

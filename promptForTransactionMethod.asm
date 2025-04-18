@@ -8,7 +8,9 @@ INCLUDE BangBangBank.inc
 ; Last update: 18/4/2025
 ;------------------------------------------------------
 .data
-depositMenuDesign BYTE NEWLINE, NEWLINE, "Bang Bang Bank Deposit", NEWLINE, NEWLINE, 
+depositMenuTitle  BYTE NEWLINE, "Bang Bang Bank Deposit", NEWLINE, 0
+dateHeader		  BYTE "Today is ", 0
+depositMenuDesign BYTE NEWLINE,
                     "==============================", NEWLINE, 
                     "1. Bank Transfer", NEWLINE, 
                     "2. Credit/Debit Card", NEWLINE, 
@@ -18,15 +20,22 @@ depositMenuDesign BYTE NEWLINE, NEWLINE, "Bang Bang Bank Deposit", NEWLINE, NEWL
 
 .code
 promptForTransactionMethod PROC, 
-	transactionChoice: PTR BYTE
+	transactionChoice: PTR BYTE,
+	timeDate: PTR BYTE
 
 	pushad
 
+	INVOKE printString, ADDR depositMenuTitle
+	INVOKE printString, ADDR dateHeader
+	INVOKE setTxtColor, DEFAULT_COLOR_CODE, DATE
+	INVOKE printString, timeDate
+	INVOKE setTxtColor, DEFAULT_COLOR_CODE, DEFAULT_COLOR_CODE
 	INVOKE printString, ADDR depositMenuDesign
 	INVOKE promptForIntChoice, 1, 4
 	mov esi, transactionChoice
 	mov BYTE PTR [esi], al
 
+done:
 	popad
 	ret
 promptForTransactionMethod ENDP
