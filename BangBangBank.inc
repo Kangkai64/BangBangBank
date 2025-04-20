@@ -240,7 +240,7 @@ promptForRecipientAccNo PROTO,
 displayCustomerMenu PROTO,
     user: PTR userCredential
 
-parseOpeningDate PROTO,
+parseInterestDate PROTO,
     account: PTR userAccount
 
 parseCurrentDate PROTO,

@@ -12,15 +12,14 @@ INCLUDE BangBangBank.inc
 currentTime SYSTEMTIME <>
 timeOutputBuffer BYTE 32 DUP(?)
 timeDate BYTE 16 DUP(?)
-openingDateLabel    BYTE "Opening Date: ", 0
 noInterestMsg       BYTE NEWLINE, "You didn't earn any interest, or it had already been applied before.", 0
 dayBuffer           BYTE 3 DUP(0)
 monthBuffer         BYTE 3 DUP(0)
 yearBuffer          BYTE 5 DUP(0)
 line                BYTE "=================================================================", NEWLINE, NEWLINE, 0
-openDayInteger      DWORD 0
-openMonthInteger    DWORD 0
-openYearInteger     DWORD 0
+interestDayInteger      DWORD 0
+interestMonthInteger    DWORD 0
+interestYearInteger     DWORD 0
 currDayInteger      DWORD 0
 currMonthInteger    DWORD 0
 currYearInteger     DWORD 0
@@ -49,7 +48,7 @@ transactionFileName    BYTE "Users\transactionLog.txt", 0
 ; This module is to get interest apply date
 ;--------------------------------------------------
 
-parseOpeningDate PROC,
+parseInterestDate PROC,
     account: PTR userAccount
     pushad                          ; Save all registers
     
@@ -65,7 +64,7 @@ parseOpeningDate PROC,
     mov bl, [esi+1]                 ; Second digit
     sub bl, '0'
     add al, bl                      ; Combine digits
-    mov openDayInteger, eax         ; Store day value
+    mov interestDayInteger, eax         ; Store day value
     
     ; Parse month (positions 3-4)
     xor eax, eax                    ; Clear EAX
@@ -76,7 +75,7 @@ parseOpeningDate PROC,
     mov bl, [esi+4]                 ; Second digit
     sub bl, '0'
     add al, bl                      ; Combine digits
-    mov openMonthInteger, eax       ; Store month value
+    mov interestMonthInteger, eax       ; Store month value
     
     ; Parse year (positions 6-9)
     xor eax, eax                    ; Clear EAX
@@ -110,11 +109,11 @@ parseOpeningDate PROC,
     sub al, '0'
     add ecx, eax                    ; Final total
     
-    mov openYearInteger, ecx        ; Store year value
+    mov interestYearInteger, ecx        ; Store year value
     
     popad                           ; Restore all registers
     ret
-parseOpeningDate ENDP
+parseInterestDate ENDP
 
 ;--------------------------------------------------
 ; This module is to get current date
@@ -215,10 +214,6 @@ checkInterest PROC,
 	; Add null terminator
 	mov BYTE PTR [edi], 0
 
-    ; Get user opening date
-    mov esi, account
-    add esi, OFFSET userAccount.opening_date
-
     ; Get balance
     mov esi, account
     add esi, OFFSET userAccount.account_balance
@@ -228,8 +223,8 @@ checkInterest PROC,
     mov balance, eax
     ;call WriteDecimalNumber
 
-    ; Call parseOpeningDate to extract date components
-    INVOKE parseOpeningDate, account
+    ; Call parseInterestDate to extract date components
+    INVOKE parseInterestDate, account
 
      ; Call parseCurrentDate to extract date components
     INVOKE parseCurrentDate, account
@@ -239,22 +234,22 @@ compare_date:
     
     ; Compare years first - must be at least 1 year difference
     mov eax, currYearInteger
-    sub eax, openYearInteger    ; Calculate year difference
+    sub eax, interestYearInteger    ; Calculate year difference
     cmp eax, 1
     jg add_interest            ; If more than 1 year difference, definitely add interest
     jl end_compare             ; If less than 1 year difference, definitely no interest
     
     ; Exactly 1 year difference, now check month
     mov eax, currMonthInteger
-    cmp eax, openMonthInteger
-    jg add_interest            ; If current month > opening month, more than 1 year passed
-    jl end_compare             ; If current month < opening month, less than 1 year passed
+    cmp eax, interestMonthInteger
+    jg add_interest            ; If current month > interest month, more than 1 year passed
+    jl end_compare             ; If current month < interest month, less than 1 year passed
     
     ; Same month, check day
     mov eax, currDayInteger
-    cmp eax, openDayInteger
-    jge add_interest           ; If current day >= opening day, exactly or more than 1 year passed
-    jl end_compare             ; If current day < opening day, less than 1 year passed
+    cmp eax, interestDayInteger
+    jge add_interest           ; If current day >= interest day, exactly or more than 1 year passed
+    jl end_compare             ; If current day < interest day, less than 1 year passed
 
     
 add_interest: 
