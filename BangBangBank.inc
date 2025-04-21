@@ -1,6 +1,9 @@
 .NOLIST
 
 INCLUDE Irvine32.inc
+INCLUDELIB Irvine32.lib
+INCLUDELIB kernel32.lib
+INCLUDELIB user32.lib
 
 NEWLINE TEXTEQU <0dh, 0ah>
 maxBufferSize = 255
