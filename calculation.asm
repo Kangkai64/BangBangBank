@@ -11,6 +11,7 @@ balanceCount    BYTE 32 DUP('0'), 0 ; Buffer for storing balance count as string
 averageBalance    BYTE 32 DUP('0'), 0  ; Buffer for storing average balance as string
 averageExpenses    BYTE 32 DUP('0'), 0  ; Buffer for storing average balance as string
 emptyValue    BYTE 32 DUP('0'), 0 ; Buffer for storing empty value as string
+errorValue    BYTE 'Error', 0 ; Buffer for storing empty value as string
 tempAmount    BYTE 32 DUP(0)       ; Temporary buffer for processing amounts
 lastBalanceForDate    BYTE 32 DUP(0)       ; Temporary buffer for processing amounts
 dateBuffer    BYTE 32 DUP('0'), 0  ; Buffer for storing date
@@ -330,7 +331,7 @@ printTotal PROC
     call CRLF
     .ENDIF
     INVOKE decimalDivide, ADDR totalCredit, ADDR balanceCount, ADDR averageExpenses
-    INVOKE Str_compare, ADDR averageExpenses, ADDR emptyValue
+    INVOKE Str_compare, ADDR averageExpenses, ADDR errorValue
     .IF ZERO?
     INVOKE printString, ADDR leftPad
     INVOKE printString, ADDR expensesMsg
