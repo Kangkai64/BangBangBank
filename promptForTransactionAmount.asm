@@ -9,7 +9,7 @@ INCLUDE BangBangBank.inc
 ; Last update: 8/4/2025
 ;------------------------------------------------------------------------
 .data
-    promptTransactionAmount BYTE "Enter transaction amount: ", 0
+    promptTransactionAmount BYTE "Enter transaction amount (Maximum 999999.99): ", 0
     invalidInputMsg BYTE "Invalid amount. Please enter a positive number.", NEWLINE, 0
     decimalPointChar BYTE ".", 0
     exceedTransactionLimit BYTE "Invalid amount! Exceeded transaction limit...", NEWLINE, 0
