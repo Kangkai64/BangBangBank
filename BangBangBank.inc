@@ -231,8 +231,7 @@ processTransaction PROTO,
     account: PTR userAccount
 
 promptForTransactionAmount PROTO,
-    inputTransactionAmountAddress: PTR BYTE,
-    account: PTR userAccount
+    inputTransactionAmountAddress: PTR BYTE
 
 promptForTransactionDetail PROTO,
     inputTransactionDetailAddress: PTR BYTE

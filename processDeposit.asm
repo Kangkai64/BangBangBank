@@ -75,7 +75,7 @@ processDeposit PROC,
     .ENDIF
 
     ;prompt transaction amount
-    INVOKE promptForTransactionAmount, OFFSET inputDepositAmount, account
+    INVOKE promptForTransactionAmount, OFFSET inputDepositAmount
 
     jc done ; Invalid transaction amount
 

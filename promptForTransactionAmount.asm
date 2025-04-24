@@ -16,12 +16,9 @@ INCLUDE BangBangBank.inc
 
 .code
 promptForTransactionAmount PROC,
-    inputTransactionAmountAddress: PTR BYTE,
-    account: PTR userAccount
+    inputTransactionAmountAddress: PTR BYTE
     
     LOCAL tempBuffer[32]: BYTE
-    LOCAL formattedAccountBalance[32]: BYTE
-    LOCAL formattedTransAmount[32]: BYTE
     
     pushad
     ; Validate input loop
@@ -42,6 +39,14 @@ input_retry:
     ; Check if any input was received
     .IF eax == 0
         INVOKE printString, ADDR invalidInputMsg
+        jmp input_retry
+    .ENDIF
+
+    ; Check input length
+    INVOKE Str_length, inputTransactionAmountAddress
+    ; If string length > 9 (counting possible decimal point), it's definitely too large
+    .IF eax > 9
+        INVOKE printString, ADDR exceedTransactionLimit
         jmp input_retry
     .ENDIF
 
@@ -87,6 +92,7 @@ validateInteger:
 
     LOOP validateInteger
 
+    ; Check if the integer part is <= 999,999
     INVOKE Str_length, inputTransactionAmountAddress
     .IF eax > 8
         INVOKE printString, ADDR exceedTransactionLimit

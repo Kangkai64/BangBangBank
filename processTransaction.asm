@@ -111,7 +111,7 @@ start:
 	INVOKE inputFromAccountByAccNo, ADDR recipientAccount
 
     ; Prompt for transaction amount
-    INVOKE promptForTransactionAmount, ADDR inputTransactionAmount, account
+    INVOKE promptForTransactionAmount, ADDR inputTransactionAmount
     INVOKE validateTransactionAmount, ADDR inputTransactionAmount, ADDR feeApplied, account
     jc done ; Invalid transaction amount
 
