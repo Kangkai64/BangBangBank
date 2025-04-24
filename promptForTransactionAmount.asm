@@ -45,6 +45,13 @@ input_retry:
         jmp input_retry
     .ENDIF
 
+    INVOKE Str_length, inputTransactionAmountAddress
+    ; If string length > 9 (counting possible decimal point), it's definitely too large
+    .IF eax > 9
+        INVOKE printString, ADDR exceedTransactionLimit
+        jmp input_retry
+    .ENDIF
+
     ; Make a copy of the input for checking decimal format
     INVOKE Str_copy, inputTransactionAmountAddress, ADDR tempBuffer
 
