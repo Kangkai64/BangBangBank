@@ -86,8 +86,14 @@ validateInteger:
     inc esi
 
     LOOP validateInteger
+
+    INVOKE Str_length, inputTransactionAmountAddress
+    .IF eax > 8
+        INVOKE printString, ADDR exceedTransactionLimit
+        jmp input_retry
+    .ENDIF
+
     CLC ; LOOP will cause the Carry Flag!
-    
 done:
     popad
     ret
