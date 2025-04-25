@@ -2,7 +2,11 @@
 
 ## Fast, Secure Financial Solutions in Assembly
 
-
+   ___                 ___                 ___            __  
+  / _ )___ ____  ___ _/ _ )___ ____  ___ _/ _ )___ ____  / /__
+ / _  / _ `/ _ \/ _ `/ _  / _ `/ _ \/ _ `/ _  / _ `/ _ \/  '_/
+/____/\_,_/_//_/\_, /____/\_,_/_//_/\_, /____/\_,_/_//_/_/\_\ 
+              /___/               /___/                      
 
 BangBangBank is a robust financial management system developed entirely in MASM assembly language, offering blazing-fast performance with minimal resource overhead. Inspired by the vibrant energy of the popular rhythm game Bang Dream, this project delivers a banking experience that's both powerful and efficient.
 
