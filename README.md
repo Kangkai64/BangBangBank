@@ -53,7 +53,7 @@ BangBangBank consistently outperforms conventional banking solutions, with:
 
 ## 🚀 Getting Started
 
-Check our [documentation](BangBangBank_Documentation.pdf) for comprehensive installation and usage instructions.
+Check our [documentation](BangBangBank Documentation.pdf) for comprehensive installation and usage instructions.
 
 ---
 
